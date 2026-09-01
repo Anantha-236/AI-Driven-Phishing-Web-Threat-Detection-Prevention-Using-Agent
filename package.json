@@ -1,0 +1,31 @@
+{
+  "name": "capstone-1",
+  "version": "1.1.0",
+  "description": "CAPSTONE-1: Local-first, privacy-preserving phishing threat detection engine",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build --config browser-extension/vite.config.ts",
+    "dev": "vite build --watch --config browser-extension/vite.config.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p browser-extension/tsconfig.json",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:browser": "playwright test",
+    "validate": "powershell -ExecutionPolicy Bypass -File scripts/validate-project.ps1"
+  },
+  "dependencies": {
+    "onnxruntime-web": "^1.21.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.1",
+    "@types/chrome": "^0.0.308",
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^22.13.4",
+    "jsdom": "^30.0.1",
+    "onnxruntime-node": "^1.27.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.1",
+    "vitest": "^3.0.6"
+  }
+}

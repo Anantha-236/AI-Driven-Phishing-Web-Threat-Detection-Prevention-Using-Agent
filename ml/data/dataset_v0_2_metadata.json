@@ -1,0 +1,17 @@
+{
+  "dataset_name": "CAPSTONE-1 Dataset v0.2",
+  "version": "0.2.0",
+  "total_samples": 20,
+  "legitimate_samples": 11,
+  "phishing_samples": 9,
+  "feature_count": 98,
+  "generation_date": "2026-08-22",
+  "provenance": {
+    "sources": [
+      "curated_ground_truth",
+      "synthetic_controlled_adversarial",
+      "counterfactual_controlled_experiment"
+    ],
+    "license": "CC-BY-4.0"
+  }
+}

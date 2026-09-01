@@ -1,0 +1,38 @@
+{
+  "train": {
+    "file": "train_split.csv",
+    "sample_count": 10,
+    "legitimate": 5,
+    "phishing": 5
+  },
+  "validation": {
+    "file": "validation_split.csv",
+    "sample_count": 4,
+    "legitimate": 2,
+    "phishing": 2
+  },
+  "test": {
+    "file": "test_split.csv",
+    "sample_count": 6,
+    "legitimate": 4,
+    "phishing": 2
+  },
+  "temporal": {
+    "file": "temporal_split.csv",
+    "sample_count": 7,
+    "legitimate": 1,
+    "phishing": 6
+  },
+  "unseen_domain": {
+    "file": "unseen_domain_split.csv",
+    "sample_count": 8,
+    "legitimate": 5,
+    "phishing": 3
+  },
+  "adversarial": {
+    "file": "adversarial_split.csv",
+    "sample_count": 10,
+    "legitimate": 1,
+    "phishing": 9
+  }
+}

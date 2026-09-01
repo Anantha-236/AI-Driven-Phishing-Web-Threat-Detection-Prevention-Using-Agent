@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAPSTONE-1 Threat Detector</title>
+  <style>
+    body {
+      width: 400px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f5f5f5;
+    }
+    
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .status-badge {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    
+    .status-badge.active {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .threat-display {
+      text-align: center;
+      padding: 16px 12px;
+    }
+    
+    .threat-level {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .threat-level.benign {
+      color: #2e7d32;
+    }
+    
+    .threat-level.suspicious {
+      color: #f57c00;
+    }
+    
+    .threat-level.malicious {
+      color: #c62828;
+    }
+
+    .threat-level.insufficient_evidence {
+      color: #546e7a;
+    }
+    
+    .score-display {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 12px;
+    }
+    
+    .confidence-bar {
+      width: 100%;
+      height: 6px;
+      background: #e0e0e0;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    
+    .confidence-fill {
+      height: 100%;
+      background: #2196f3;
+      border-radius: 3px;
+    }
+    
+    .details {
+      font-size: 12px;
+      color: #555;
+      margin-top: 12px;
+    }
+    
+    .detail-row {
+      display: flex;
+      margin-bottom: 8px;
+    }
+    
+    .detail-label {
+      font-weight: 500;
+      min-width: 80px;
+      color: #333;
+    }
+    
+    .detail-value {
+      flex: 1;
+      color: #666;
+    }
+    
+    .reasons {
+      font-size: 11px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #f0f0f0;
+    }
+    
+    .reason-label {
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 6px;
+    }
+    
+    .reason-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .reason-list li {
+      padding: 4px 0;
+      color: #666;
+      word-break: break-word;
+    }
+    
+    .reason-list li:before {
+      content: "• ";
+      margin-right: 6px;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-allow {
+      background: #4caf50;
+      color: white;
+    }
+    
+    .btn-allow:hover {
+      background: #45a049;
+    }
+    
+    .btn-report {
+      background: #2196f3;
+      color: white;
+    }
+    
+    .btn-report:hover {
+      background: #0b7dda;
+    }
+    
+    .status-idle {
+      text-align: center;
+      padding: 24px 12px;
+      color: #999;
+      font-size: 13px;
+    }
+    
+    .status-idle strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">🛡️ CAPSTONE-1</div>
+    <div class="status-badge active">ACTIVE</div>
+  </div>
+  
+  <div id="threat-container" style="display: none;">
+    <div class="container threat-display">
+      <div class="threat-level" id="threat-level"></div>
+      <div class="score-display">
+        Score: <span id="score">-</span> | Confidence: <span id="confidence">-</span>%
+      </div>
+      <div class="confidence-bar">
+        <div class="confidence-fill" id="confidence-bar"></div>
+      </div>
+    </div>
+    
+    <div class="container details">
+      <div class="detail-row">
+        <div class="detail-label">Domain:</div>
+        <div class="detail-value" id="domain">-</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">Data Types:</div>
+        <div class="detail-value" id="data-categories">-</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">Action:</div>
+        <div class="detail-value" id="action">-</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">Status:</div>
+        <div class="detail-value" id="outcome">-</div>
+      </div>
+      
+      <div class="reasons">
+        <div class="reason-label">Evidence & Risk Indicators:</div>
+        <ul class="reason-list" id="reasons-list"></ul>
+      </div>
+    </div>
+    
+    <div class="actions">
+      <button class="btn-allow" id="btn-allow">Allow</button>
+      <button class="btn-report" id="btn-report">Report</button>
+    </div>
+  </div>
+  
+  <div id="status-idle" class="container status-idle">
+    <strong>Ready</strong>
+    Waiting for page analysis...
+  </div>
+  
+  <script type="module" src="popup.ts"></script>
+</body>
+</html>

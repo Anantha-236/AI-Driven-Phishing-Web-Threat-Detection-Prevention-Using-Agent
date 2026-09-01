@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "model": "logistic_regression",
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "classification_report": "              precision    recall  f1-score   support\n\n           0     1.0000    1.0000    1.0000         4\n           1     1.0000    1.0000    1.0000         6\n\n    accuracy                         1.0000        10\n   macro avg     1.0000    1.0000    1.0000        10\nweighted avg     1.0000    1.0000    1.0000        10\n"
+    },
+    {
+      "model": "random_forest",
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "classification_report": "              precision    recall  f1-score   support\n\n           0     1.0000    1.0000    1.0000         4\n           1     1.0000    1.0000    1.0000         6\n\n    accuracy                         1.0000        10\n   macro avg     1.0000    1.0000    1.0000        10\nweighted avg     1.0000    1.0000    1.0000        10\n"
+    }
+  ],
+  "best_model": "logistic_regression"
+}

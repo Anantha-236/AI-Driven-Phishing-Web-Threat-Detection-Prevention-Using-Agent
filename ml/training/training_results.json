@@ -1,0 +1,282 @@
+{
+  "Group_A_URL_Only": {
+    "Logistic_Regression": {
+      "features_count": 11,
+      "accuracy": 0.6667,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6667,
+      "auc_roc": 1.0,
+      "fpr": 0.5,
+      "fnr": 0.0,
+      "confusion_matrix": {
+        "tn": 2,
+        "fp": 2,
+        "fn": 0,
+        "tp": 2
+      },
+      "train_time_ms": 25.968,
+      "single_inference_latency_ms": 0.053
+    },
+    "Random_Forest": {
+      "features_count": 11,
+      "accuracy": 0.8333,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1_score": 0.6667,
+      "auc_roc": 0.5625,
+      "fpr": 0.0,
+      "fnr": 0.5,
+      "confusion_matrix": {
+        "tn": 4,
+        "fp": 0,
+        "fn": 1,
+        "tp": 1
+      },
+      "train_time_ms": 43.386,
+      "single_inference_latency_ms": 0.645
+    },
+    "Gradient_Boosting": {
+      "features_count": 11,
+      "accuracy": 0.6667,
+      "precision": 0.5,
+      "recall": 0.5,
+      "f1_score": 0.5,
+      "auc_roc": 0.5625,
+      "fpr": 0.25,
+      "fnr": 0.5,
+      "confusion_matrix": {
+        "tn": 3,
+        "fp": 1,
+        "fn": 1,
+        "tp": 1
+      },
+      "train_time_ms": 16.72,
+      "single_inference_latency_ms": 0.038
+    }
+  },
+  "Group_B_URL_Domain": {
+    "Logistic_Regression": {
+      "features_count": 16,
+      "accuracy": 0.6667,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6667,
+      "auc_roc": 1.0,
+      "fpr": 0.5,
+      "fnr": 0.0,
+      "confusion_matrix": {
+        "tn": 2,
+        "fp": 2,
+        "fn": 0,
+        "tp": 2
+      },
+      "train_time_ms": 21.24,
+      "single_inference_latency_ms": 0.034
+    },
+    "Random_Forest": {
+      "features_count": 16,
+      "accuracy": 0.8333,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1_score": 0.6667,
+      "auc_roc": 0.6875,
+      "fpr": 0.0,
+      "fnr": 0.5,
+      "confusion_matrix": {
+        "tn": 4,
+        "fp": 0,
+        "fn": 1,
+        "tp": 1
+      },
+      "train_time_ms": 35.565,
+      "single_inference_latency_ms": 0.28
+    },
+    "Gradient_Boosting": {
+      "features_count": 16,
+      "accuracy": 0.6667,
+      "precision": 0.5,
+      "recall": 0.5,
+      "f1_score": 0.5,
+      "auc_roc": 0.5625,
+      "fpr": 0.25,
+      "fnr": 0.5,
+      "confusion_matrix": {
+        "tn": 3,
+        "fp": 1,
+        "fn": 1,
+        "tp": 1
+      },
+      "train_time_ms": 17.329,
+      "single_inference_latency_ms": 0.046
+    }
+  },
+  "Group_C_URL_Domain_DOM": {
+    "Logistic_Regression": {
+      "features_count": 22,
+      "accuracy": 0.5,
+      "precision": 0.4,
+      "recall": 1.0,
+      "f1_score": 0.5714,
+      "auc_roc": 1.0,
+      "fpr": 0.75,
+      "fnr": 0.0,
+      "confusion_matrix": {
+        "tn": 1,
+        "fp": 3,
+        "fn": 0,
+        "tp": 2
+      },
+      "train_time_ms": 27.777,
+      "single_inference_latency_ms": 0.038
+    },
+    "Random_Forest": {
+      "features_count": 22,
+      "accuracy": 0.8333,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1_score": 0.6667,
+      "auc_roc": 0.5625,
+      "fpr": 0.0,
+      "fnr": 0.5,
+      "confusion_matrix": {
+        "tn": 4,
+        "fp": 0,
+        "fn": 1,
+        "tp": 1
+      },
+      "train_time_ms": 42.092,
+      "single_inference_latency_ms": 0.296
+    },
+    "Gradient_Boosting": {
+      "features_count": 22,
+      "accuracy": 0.8333,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1_score": 0.6667,
+      "auc_roc": 0.6875,
+      "fpr": 0.0,
+      "fnr": 0.5,
+      "confusion_matrix": {
+        "tn": 4,
+        "fp": 0,
+        "fn": 1,
+        "tp": 1
+      },
+      "train_time_ms": 16.542,
+      "single_inference_latency_ms": 0.036
+    }
+  },
+  "Group_D_URL_Domain_DOM_Form": {
+    "Logistic_Regression": {
+      "features_count": 28,
+      "accuracy": 0.6667,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6667,
+      "auc_roc": 1.0,
+      "fpr": 0.5,
+      "fnr": 0.0,
+      "confusion_matrix": {
+        "tn": 2,
+        "fp": 2,
+        "fn": 0,
+        "tp": 2
+      },
+      "train_time_ms": 22.708,
+      "single_inference_latency_ms": 0.034
+    },
+    "Random_Forest": {
+      "features_count": 28,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "auc_roc": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0,
+      "confusion_matrix": {
+        "tn": 4,
+        "fp": 0,
+        "fn": 0,
+        "tp": 2
+      },
+      "train_time_ms": 36.47,
+      "single_inference_latency_ms": 0.287
+    },
+    "Gradient_Boosting": {
+      "features_count": 28,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "auc_roc": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0,
+      "confusion_matrix": {
+        "tn": 4,
+        "fp": 0,
+        "fn": 0,
+        "tp": 2
+      },
+      "train_time_ms": 14.798,
+      "single_inference_latency_ms": 0.033
+    }
+  },
+  "Group_E_Full_Contextual": {
+    "Logistic_Regression": {
+      "features_count": 36,
+      "accuracy": 0.8333,
+      "precision": 0.6667,
+      "recall": 1.0,
+      "f1_score": 0.8,
+      "auc_roc": 1.0,
+      "fpr": 0.25,
+      "fnr": 0.0,
+      "confusion_matrix": {
+        "tn": 3,
+        "fp": 1,
+        "fn": 0,
+        "tp": 2
+      },
+      "train_time_ms": 9.333,
+      "single_inference_latency_ms": 0.061
+    },
+    "Random_Forest": {
+      "features_count": 36,
+      "accuracy": 0.8333,
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1_score": 0.6667,
+      "auc_roc": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.5,
+      "confusion_matrix": {
+        "tn": 4,
+        "fp": 0,
+        "fn": 1,
+        "tp": 1
+      },
+      "train_time_ms": 36.963,
+      "single_inference_latency_ms": 0.277
+    },
+    "Gradient_Boosting": {
+      "features_count": 36,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "auc_roc": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0,
+      "confusion_matrix": {
+        "tn": 4,
+        "fp": 0,
+        "fn": 0,
+        "tp": 2
+      },
+      "train_time_ms": 15.129,
+      "single_inference_latency_ms": 0.033
+    }
+  }
+}

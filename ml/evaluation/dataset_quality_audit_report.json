@@ -1,0 +1,22 @@
+{
+  "dataset_path": "C:\\Users\\anant\\OneDrive\\Desktop\\Capstone-1\\ml\\data\\dataset_v0_2.csv",
+  "total_samples": 20,
+  "features_per_sample": 98,
+  "label_distribution": {
+    "legitimate": 11,
+    "phishing": 9
+  },
+  "unique_domains": 18,
+  "duplicate_sample_ids": [],
+  "duplicate_urls": [],
+  "columns_with_nulls": {},
+  "provenance_sources": [
+    "curated_ground_truth",
+    "synthetic_controlled_adversarial",
+    "counterfactual_controlled_experiment"
+  ],
+  "licenses": [
+    "CC-BY-4.0"
+  ],
+  "audit_status": "PASS"
+}

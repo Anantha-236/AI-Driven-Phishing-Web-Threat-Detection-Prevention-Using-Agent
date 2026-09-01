@@ -1,0 +1,49 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Node / frontend output
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.cache/
+
+# Python virtual environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Local runtime data and generated state
+*.db
+*.sqlite
+*.sqlite3
+*.ort
+
+# Local archives and experimental material
+_archive/
+
+# Local runtime / logs
+*.log
+*.tmp
+*.temp
+*.bak
+*.sav
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OneDrive / conflict noise
+*-conflict-*
