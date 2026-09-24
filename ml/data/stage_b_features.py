@@ -104,7 +104,13 @@ def _load_episode_index(data: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
         if not _is_sha256(expected_hash) or _sha256_json(events) != expected_hash:
             raise FeatureMaterializationError(f"event hash mismatch for sample {sample_id}")
         provenance = raw.get("collection_provenance")
-        if provenance not in {"REAL_BROWSER", "CONTROLLED_BROWSER", "ARCHIVED_SANITIZED_EVENTS", "SYNTHETIC"}:
+        if provenance not in {
+            "REAL_BROWSER",
+            "CONTROLLED_BROWSER",
+            "ARCHIVED_SANITIZED_EVENTS",
+            "ARCHIVED_BROWSER_REPLAY",
+            "SYNTHETIC",
+        }:
             raise FeatureMaterializationError("explicit collection_provenance is required")
         index[sample_id] = {
             "sample_id": sample_id,

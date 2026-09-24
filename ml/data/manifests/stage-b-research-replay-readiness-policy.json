@@ -1,0 +1,26 @@
+{
+  "schema_version": "stage-b-readiness-policy-1",
+  "min_samples_per_class": {
+    "train": 100,
+    "selection": 50,
+    "calibration": 50,
+    "test": 100
+  },
+  "allowed_provenance": {
+    "train": ["ARCHIVED_BROWSER_REPLAY"],
+    "selection": ["ARCHIVED_BROWSER_REPLAY"],
+    "calibration": ["ARCHIVED_BROWSER_REPLAY"],
+    "test": ["ARCHIVED_BROWSER_REPLAY"]
+  },
+  "require_strict_forward_test": true,
+  "require_group_isolation": [
+    "artifact_group",
+    "domain_group",
+    "brand_group"
+  ],
+  "notes": [
+    "RESEARCH-ONLY policy for safe local replay of archived HTML captures.",
+    "source_groups isolation is not claimed for a single archive dataset; this policy cannot authorize deployment.",
+    "The default Stage B readiness policy remains unchanged and does not accept ARCHIVED_BROWSER_REPLAY."
+  ]
+}

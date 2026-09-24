@@ -80,7 +80,13 @@ def validate_readiness_policy(policy: Mapping[str, Any]) -> dict[str, Any]:
     provenance = policy.get("allowed_provenance")
     if not isinstance(provenance, Mapping) or set(provenance) != set(PARTITIONS):
         raise ReadinessAuditError("readiness policy requires provenance rules for every partition")
-    allowed_values = {"REAL_BROWSER", "CONTROLLED_BROWSER", "ARCHIVED_SANITIZED_EVENTS", "SYNTHETIC"}
+    allowed_values = {
+        "REAL_BROWSER",
+        "CONTROLLED_BROWSER",
+        "ARCHIVED_SANITIZED_EVENTS",
+        "ARCHIVED_BROWSER_REPLAY",
+        "SYNTHETIC",
+    }
     for partition, values in provenance.items():
         if not isinstance(values, list) or not values or any(v not in allowed_values for v in values):
             raise ReadinessAuditError(f"invalid provenance policy for {partition}")
