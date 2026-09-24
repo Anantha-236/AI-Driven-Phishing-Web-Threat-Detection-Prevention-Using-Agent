@@ -195,20 +195,56 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
 
     if (runtimeMessage.type === "GET_LATEST_DECISION") {
+      // This query is intended for extension-owned UI/status surfaces. If an
+      // extension page is opened as a normal browser tab, sender.tab refers to
+      // the extension page itself, not the protected page. Resolve the active
+      // browser tab instead.
+      if (!_sender.url?.startsWith(chrome.runtime.getURL(''))) {
+        sendResponse({ ok: false, detection: null });
+        return false;
+      }
+
       void (async () => {
-        const tabId = _sender.tab?.id ?? (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id;
-        if (tabId === undefined) { sendResponse({ ok: true, detection: null }); return; }
+        const tabId = (await chrome.tabs.query({
+          active: true,
+          currentWindow: true,
+        }))[0]?.id;
+
+        if (tabId === undefined) {
+          sendResponse({ ok: true, detection: null });
+          return;
+        }
+
         const key = `security-report:${tabId}`;
-        const report: EventSecurityReport | undefined = (await chrome.storage.session.get(key))[key];
-        const frame = await chrome.webNavigation.getFrame({ tabId, frameId: 0 }).catch(() => null);
-        sendResponse({ ok: true, detection: report && frame?.documentId === report.document_id ? {
-          threatLevel: report.threatLevel, score: report.model_score, confidence: report.confidence,
-          confidence_kind: report.confidence_kind, reasons: report.decision_reasons,
-          action: report.action, outcome: report.outcome, domain: report.page_origin,
-          requestedDataTypes: report.requestedDataTypes, decision_source: report.decision_source,
-          agent_version: report.agent_version, event_seq: report.event_seq,
-        } : null });
+        const report: EventSecurityReport | undefined =
+          (await chrome.storage.session.get(key))[key];
+
+        const frame = await chrome.webNavigation
+          .getFrame({ tabId, frameId: 0 })
+          .catch(() => null);
+
+        sendResponse({
+          ok: true,
+          detection:
+            report && frame?.documentId === report.document_id
+              ? {
+                  threatLevel: report.threatLevel,
+                  score: report.model_score,
+                  confidence: report.confidence,
+                  confidence_kind: report.confidence_kind,
+                  reasons: report.decision_reasons,
+                  action: report.action,
+                  outcome: report.outcome,
+                  domain: report.page_origin,
+                  requestedDataTypes: report.requestedDataTypes,
+                  decision_source: report.decision_source,
+                  agent_version: report.agent_version,
+                  event_seq: report.event_seq,
+                }
+              : null,
+        });
       })().catch(() => sendResponse({ ok: false, detection: null }));
+
       return true;
     }
 

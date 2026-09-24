@@ -178,11 +178,17 @@ function classificationFromAgentState(
   }
 }
 
-export function assessEventStream(
+export interface EventAssessmentResult {
+  report: EventSecurityReport;
+  riskDecision: RiskDecision;
+  riskSignals: RiskSignalSet;
+}
+
+export function assessEventStreamDetailed(
   events: SensitiveEvent[],
   model: EventModelArtifact | null,
   incomplete = false,
-): EventSecurityReport | null {
+): EventAssessmentResult | null {
   if (!events.length) return null;
 
   const start = performance.now();
@@ -391,7 +397,7 @@ export function assessEventStream(
     unknowns.push('COLLECTION_INCOMPLETE');
   }
 
-  return {
+  const report: EventSecurityReport = {
     schema_version: 'event-report-1',
     analysis_version: 'event-analysis-1',
     policy_version: 'evidence-policy-1',
@@ -518,6 +524,16 @@ export function assessEventStream(
     analysis_latency_ms:
       performance.now() - start,
   };
+
+  return { report, riskDecision, riskSignals };
+}
+
+export function assessEventStream(
+  events: SensitiveEvent[],
+  model: EventModelArtifact | null,
+  incomplete = false,
+): EventSecurityReport | null {
+  return assessEventStreamDetailed(events, model, incomplete)?.report ?? null;
 }
 
 export interface AssessmentContext {

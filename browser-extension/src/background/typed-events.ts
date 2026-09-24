@@ -9,12 +9,32 @@ import {
   SensitiveEvent,
   validateContentBatch,
 } from '../core/tsfeg';
-import { assessEventStream, EventSecurityReport } from '../core/assessment';
+import { assessEventStreamDetailed, EventSecurityReport } from '../core/assessment';
 import { EventModelArtifact } from '../core/service-worker-onnx-adapter';
 import { createDurableQueue } from '../core/storage/durable-queue';
+import { createSessionContainment } from '../core/enforcement/session-containment';
+import { createAgentEnforcementPlan } from '../core/agent/enforcement-plan';
+import { transitionAgent } from '../core/agent/state-machine';
+import type { AgentAction, AgentRiskState, EnforcementOutcome, RiskDecision } from '../core/agent/types';
 
 const EVENTS_ENDPOINT = 'http://127.0.0.1:8000/api/v1/events/batch';
 const ASSESSMENTS_ENDPOINT = 'http://127.0.0.1:8000/api/v1/assessments';
+const AGENT_RUNTIME_PREFIX = 'agent-runtime:';
+
+export interface AgentRuntimeSnapshot {
+  schema_version: 'agent-runtime-1';
+  tab_id: number;
+  document_id: string | null;
+  event_seq: number;
+  state: AgentRiskState;
+  requested_action: AgentAction;
+  effective_action: AgentAction;
+  enforcement_outcome: EnforcementOutcome;
+  content_outcome: EventSecurityReport['outcome'];
+  containment_origin: string | null;
+  automatic_block_authorized: boolean;
+  updated_at: number;
+}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -59,6 +79,117 @@ export function installTypedEvents() {
     maxRecords: 256,
     maxBytes: 1_000_000,
   });
+
+  const containment = createSessionContainment();
+
+  async function readAgentRuntime(tab: number): Promise<AgentRuntimeSnapshot | null> {
+    const key = `${AGENT_RUNTIME_PREFIX}${tab}`;
+    const value = (await chrome.storage.session.get(key))[key] as AgentRuntimeSnapshot | undefined;
+    return value?.schema_version === 'agent-runtime-1' ? value : null;
+  }
+
+  async function writeAgentRuntime(snapshot: AgentRuntimeSnapshot): Promise<void> {
+    await chrome.storage.session.set({ [`${AGENT_RUNTIME_PREFIX}${snapshot.tab_id}`]: snapshot });
+  }
+
+  async function clearAgentRuntime(tab: number): Promise<void> {
+    await chrome.storage.session.remove(`${AGENT_RUNTIME_PREFIX}${tab}`);
+  }
+
+  function reportReason(report: EventSecurityReport): string {
+    if (report.identity.status === 'POSSIBLE_IMPERSONATION') return 'HOSTNAME_RESEMBLES_BRAND';
+    if (report.form_destinations.some(form => form.status === 'HTTPS_DOWNGRADE' && form.sensitive_types.length)) return 'HTTPS_DOWNGRADE';
+    return 'DESTINATION_CHANGED';
+  }
+
+  async function executeAgentDecision(
+    tab: number,
+    report: EventSecurityReport,
+    riskDecision: RiskDecision,
+  ): Promise<AgentRuntimeSnapshot> {
+    const prior = await readAgentRuntime(tab);
+    let state: AgentRiskState = prior?.document_id === report.document_id ? prior.state : 'OBSERVING';
+
+    let transitionAccepted = true;
+    if (!(state === 'CONTAINED' && riskDecision.state === 'HIGH_RISK')) {
+      const transition = transitionAgent(state, riskDecision.state);
+      transitionAccepted = transition.accepted;
+      if (transition.accepted) state = transition.to;
+    }
+
+    const requestedPlan = createAgentEnforcementPlan(report, riskDecision);
+    const plan = !transitionAccepted
+      ? {
+          ...requestedPlan,
+          contentAction: 'CONFIRM' as const,
+          containmentOrigin: null,
+          releaseContainment: false,
+        }
+      : requestedPlan;
+    let effectiveAction: AgentAction = transitionAccepted
+      ? plan.requestedAction
+      : 'SHIELD_SENSITIVE_ACTION';
+    let enforcementOutcome: EnforcementOutcome = 'DECISION_ONLY';
+    let containmentOrigin: string | null = null;
+
+    if (plan.releaseContainment) {
+      enforcementOutcome = await containment.release({
+        tabId: tab,
+        documentId: report.document_id ?? undefined,
+      });
+    }
+
+    if (plan.containmentOrigin && report.document_id) {
+      containmentOrigin = plan.containmentOrigin;
+      enforcementOutcome = await containment.install({
+        tabId: tab,
+        documentId: report.document_id,
+        destinationOrigin: plan.containmentOrigin,
+      });
+
+      if (enforcementOutcome === 'SESSION_RULE_INSTALLED') {
+        const contained = transitionAgent(state, 'CONTAINED');
+        if (contained.accepted) state = contained.to;
+      } else {
+        effectiveAction = 'SHIELD_SENSITIVE_ACTION';
+      }
+    } else if (plan.requestedAction === 'CONTAIN_TAB' || plan.requestedAction === 'ADD_SESSION_BLOCK') {
+      effectiveAction = 'SHIELD_SENSITIVE_ACTION';
+    }
+
+    if (report.document_id) {
+      try {
+        const receipt = await chrome.tabs.sendMessage(
+          tab,
+          { type: 'SECURITY_REPORT', action: plan.contentAction, reason: reportReason(report) },
+          { documentId: report.document_id },
+        );
+        if (receipt?.outcome === 'WARNING_DISPLAYED' && report.outcome === 'DECISION_ONLY') {
+          report.outcome = 'WARNING_DISPLAYED';
+          if (enforcementOutcome === 'DECISION_ONLY') enforcementOutcome = 'WARNING_DISPLAYED';
+        }
+      } catch {
+        // The local decision or installed DNR rule remains valid.
+      }
+    }
+
+    const snapshot: AgentRuntimeSnapshot = {
+      schema_version: 'agent-runtime-1',
+      tab_id: tab,
+      document_id: report.document_id,
+      event_seq: report.event_seq,
+      state,
+      requested_action: plan.requestedAction,
+      effective_action: effectiveAction,
+      enforcement_outcome: enforcementOutcome,
+      content_outcome: report.outcome,
+      containment_origin: containmentOrigin,
+      automatic_block_authorized: riskDecision.automaticBlockAuthorized,
+      updated_at: Date.now(),
+    };
+    await writeAgentRuntime(snapshot);
+    return snapshot;
+  }
 
   async function postEventBatch(payload: { events: SensitiveEvent[] }): Promise<void> {
     const response = await fetch(EVENTS_ENDPOINT, {
@@ -219,19 +350,17 @@ export function installTypedEvents() {
     const incomplete = state.dropped > 0 || state.content_dropped > 0 || state.next_seq > state.events.length + 1;
     // The browser owns the immediate decision. Backend requests below only
     // persist sanitized research evidence and cannot replace this assessment.
-    const report = assessEventStream(events, model, incomplete);
-    if (!report) return;
+    const assessment = assessEventStreamDetailed(events, model, incomplete);
+    if (!assessment) return;
+    const { report, riskDecision } = assessment;
     const current = await chrome.webNavigation.getFrame({ tabId: tab, frameId: 0 }).catch(() => null);
     if (!current || current.documentId !== report.document_id) return;
     if (!await saveReport(report)) return;
-    if (report.document_id) {
-      try {
-        const reason = report.identity.status === 'POSSIBLE_IMPERSONATION' ? 'HOSTNAME_RESEMBLES_BRAND' :
-          report.form_destinations.some(form => form.status === 'HTTPS_DOWNGRADE' && form.sensitive_types.length) ? 'HTTPS_DOWNGRADE' : 'DESTINATION_CHANGED';
-        const receipt = await chrome.tabs.sendMessage(tab, { type: 'SECURITY_REPORT', action: report.action, reason }, { documentId: report.document_id });
-        if (receipt?.outcome === 'WARNING_DISPLAYED' && report.outcome === 'DECISION_ONLY') report.outcome = 'WARNING_DISPLAYED';
-      } catch { /* A decision does not prove that the page received a warning. */ }
-    }
+
+    const beforeEnforcement = await chrome.webNavigation.getFrame({ tabId: tab, frameId: 0 }).catch(() => null);
+    if (!beforeEnforcement || beforeEnforcement.documentId !== report.document_id) return;
+    await executeAgentDecision(tab, report, riskDecision);
+
     if (!await saveReport(report, true)) return;
     const finalReport = report;
     void persistReport(finalReport).then(() => acknowledgeReport(finalReport)).catch(() => {});
@@ -257,6 +386,7 @@ export function installTypedEvents() {
   chrome.alarms.create('tsfeg-retry', { periodInMinutes: 1 });
   chrome.alarms.onAlarm.addListener(alarm => {
     if (alarm.name !== 'tsfeg-retry') return;
+    void containment.cleanupExpired().catch(() => {});
     void replayDurableDelivery().catch(() => {});
     void chrome.storage.session.get(null).then(states => {
       for (const key of Object.keys(states)) if (key.startsWith('tsfeg:')) { const tab = Number(key.slice(6)); flush(tab); scheduleAnalysis(tab); }
@@ -267,7 +397,8 @@ export function installTypedEvents() {
   });
 
   chrome.tabs.onRemoved.addListener(tab => {
-    void chrome.storage.session.remove(`security-report:${tab}`);
+    void containment.release({ tabId: tab }).catch(() => {});
+    void chrome.storage.session.remove([`security-report:${tab}`, `${AGENT_RUNTIME_PREFIX}${tab}`]);
     void recorder.flush(tab).then(() => chrome.storage.session.remove(`tsfeg:${tab}`)).catch(() => {});
   });
 
@@ -295,7 +426,9 @@ export function installTypedEvents() {
         const pendingReport = (await chrome.storage.session.get(`assessment-pending:${tab}`))[`assessment-pending:${tab}`];
         const durableStats = await durable.stats().catch(() => ({ count: 0, bytes: 0, dropped: 0, corrupt: 0 }));
         const frame = await chrome.webNavigation.getFrame({ tabId: tab, frameId: 0 }).catch(() => null);
+        const agentRuntime = await readAgentRuntime(tab);
         respond({ ok: true, report: frame && report?.document_id === frame.documentId ? report : null,
+          agent_runtime: frame && agentRuntime?.document_id === frame.documentId ? agentRuntime : null,
           delivery: { backend_connected: health.connected, checked_at: health.checked_at,
             pending_events: state.pending.length, pending_report: !!pendingReport,
             dropped_events: state.dropped + state.content_dropped, content_delivery_errors: state.content_delivery_errors,
@@ -341,17 +474,61 @@ export function installTypedEvents() {
   chrome.webRequest.onBeforeRequest.addListener(details => network(details, 'REQUEST_OBSERVED'), { urls: ['<all_urls>'] });
   chrome.webRequest.onBeforeRedirect.addListener(details => network(details, 'REDIRECT_OBSERVED'), { urls: ['<all_urls>'] });
 
+  const navigationReset = new Map<number, Promise<void>>();
+
   function navigation(details: chrome.webNavigation.WebNavigationFramedCallbackDetails, event_type: Observation['event_type']) {
-    if (!safeOrigin(details.url)) return;
-    void recorder.append(observation({ event_type, frame_origin: safeOrigin(details.url), destination_origin: safeOrigin(details.url), timestamp_ms: Math.floor(details.timeStamp) }),
-      { tab_id: details.tabId, document_id: details.documentId || null, frame_id: details.frameId, parent_frame_id: null, trust: 'WEBNAVIGATION_METADATA' })
-      .then(() => schedule(details.tabId)).catch(() => console.warn('[CAPSTONE-1] Navigation event rejected or storage unavailable'));
+    const frameOrigin = safeOrigin(details.url);
+    if (!frameOrigin) return;
+
+    // Queue the sanitized navigation event immediately so Chromium callback order
+    // is preserved by the recorder's serialized append queue. Cleanup must never
+    // delay NAVIGATION_STARTED behind a later NAVIGATION_COMMITTED event.
+    const append = recorder.append(
+      observation({
+        event_type,
+        frame_origin: frameOrigin,
+        destination_origin: frameOrigin,
+        timestamp_ms: Math.floor(details.timeStamp),
+      }),
+      {
+        tab_id: details.tabId,
+        document_id: details.documentId || null,
+        frame_id: details.frameId,
+        parent_frame_id: null,
+        trust: 'WEBNAVIGATION_METADATA',
+      },
+    );
+
+    if (details.frameId === 0 && event_type === 'NAVIGATION_STARTED') {
+      const reset = append.then(async () => {
+        await containment.release({ tabId: details.tabId }).catch(() => 'ENFORCEMENT_FAILED' as const);
+        await clearAgentRuntime(details.tabId).catch(() => {});
+        await chrome.storage.session.remove(`security-report:${details.tabId}`).catch(() => {});
+      });
+      navigationReset.set(details.tabId, reset);
+      void reset.finally(() => {
+        if (navigationReset.get(details.tabId) === reset) navigationReset.delete(details.tabId);
+      });
+    }
+
+    void (async () => {
+      await append;
+      // A top-level commit may arrive while the start-event cleanup is still
+      // running. Wait for that reset before scheduling analysis so it cannot
+      // delete a freshly generated report or leave stale containment in place.
+      if (details.frameId === 0 && event_type === 'NAVIGATION_COMMITTED') {
+        await navigationReset.get(details.tabId)?.catch(() => {});
+      }
+      schedule(details.tabId);
+    })().catch(() => console.warn('[CAPSTONE-1] Navigation event rejected or storage unavailable'));
   }
 
   chrome.webNavigation.onBeforeNavigate.addListener(details => navigation(details, 'NAVIGATION_STARTED'));
   chrome.webNavigation.onCommitted.addListener(details => navigation(details, 'NAVIGATION_COMMITTED'));
   chrome.webNavigation.onHistoryStateUpdated.addListener(details => navigation(details, 'HISTORY_UPDATED'));
   chrome.webNavigation.onReferenceFragmentUpdated.addListener(details => navigation(details, 'HISTORY_UPDATED'));
+
+  void containment.cleanupExpired().catch(() => {});
 
   // storage.local survives service-worker and full-browser restarts. Replays are
   // backend-idempotent; local detection never waits for this research delivery.
