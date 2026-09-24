@@ -1,5 +1,6 @@
 import { test, expect, storedCollection } from './fixtures';
 import { writeFileSync } from 'node:fs';
+
 test('existing MutationObserver recollects inserted fields in shipped Chromium bundle', async ({ page }) => {
   await page.goto('http://127.0.0.1:41731/dynamic');
   await expect.poll(async () => {
@@ -10,6 +11,37 @@ test('existing MutationObserver recollects inserted fields in shipped Chromium b
   const meta = JSON.parse((await page.getAttribute('html', 'data-capstone-evidence-meta'))!);
   await expect.poll(() => storedCollection(meta.collectionId)).not.toBeNull();
   expect(storedCollection(meta.collectionId).categories).toEqual(expect.arrayContaining(['EMAIL', 'PASSWORD', 'OTP']));
+});
+
+test('discovers a sensitive field inserted inside an open shadow root after page load', async ({ context, page }) => {
+  const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+
+  await page.goto('http://127.0.0.1:41731/benign');
+
+  const tab = await worker.evaluate(
+    async url => (await chrome.tabs.query({})).find(candidate => candidate.url === url)!.id!,
+    page.url(),
+  );
+
+  await page.evaluate(() => {
+    const host = document.createElement('section');
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = '<input name="recovery-code">';
+    document.body.append(host);
+  });
+
+  const read = () => worker.evaluate(async id => {
+    const state = (await chrome.storage.session.get(`tsfeg:${id}`))[`tsfeg:${id}`];
+    return state?.events ?? [];
+  }, tab);
+
+  await expect.poll(async () => {
+    const events = await read();
+    return events.some((event: any) =>
+      event.event_type === 'FIELD_DISCOVERED' &&
+      event.sensitive_type === 'RECOVERY'
+    );
+  }, { timeout: 15000 }).toBe(true);
 });
 
 test('measures controlled burst collection and reports retained evidence without loss', async ({ context, page }) => {
