@@ -50,6 +50,11 @@ class ReleaseCandidateError(ValueError):
     """Raised when the Stage B release candidate cannot be frozen safely."""
 
 
+def _readiness_allows_integration(readiness: Mapping[str, Any]) -> bool:
+    """Research-only readiness can be benchmarked but can never become integration-eligible."""
+    return readiness.get("deployment_authorized") is not False
+
+
 def _canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
@@ -286,7 +291,12 @@ def freeze_stage_b_release_candidate(
         and len(final_fixed["fpr_wilson_95"]) == 2
         and float(final_fixed["fpr_wilson_95"][1]) <= primary_cap
     )
-    integration_eligible = calibration_authorized and final_bound_supported
+    research_readiness_allows_integration = _readiness_allows_integration(readiness_audit)
+    integration_eligible = (
+        calibration_authorized
+        and final_bound_supported
+        and research_readiness_allows_integration
+    )
 
     parity_payload = {
         "schema_version": PARITY_SCHEMA,
@@ -310,6 +320,10 @@ def freeze_stage_b_release_candidate(
         reasons.append("Task 9 did not authorize the primary low-FPR threshold.")
     if not final_bound_supported:
         reasons.append("Task 10 final-test Wilson FPR upper bound exceeds the frozen primary cap.")
+    if not research_readiness_allows_integration:
+        reasons.append(
+            "Stage B readiness is explicitly research-only and does not authorize integration eligibility."
+        )
     reasons.append("Task 12 browser-WASM integration and end-to-end extension parity are not yet complete.")
 
     manifest = {
