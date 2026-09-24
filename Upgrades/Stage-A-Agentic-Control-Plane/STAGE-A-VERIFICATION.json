@@ -1,0 +1,86 @@
+﻿{
+    "schema_version":  "stage-a-verification-1",
+    "status":  "PASS",
+    "branch":  "upgrade/agentic-defense-v2",
+    "commit":  "3ec3fc73675f36759398112eae1e26b3c12d170a",
+    "started_at":  "2026-09-24T22:35:13.3469063+05:30",
+    "finished_at":  "2026-09-24T22:36:51.6466925+05:30",
+    "duration_seconds":  98.3,
+    "checks":  [
+                   {
+                       "Name":  "TypeScript typecheck",
+                       "Command":  "npm.cmd run typecheck",
+                       "ExitCode":  0,
+                       "StartedAt":  "2026-09-24T22:35:13.3594024+05:30",
+                       "FinishedAt":  "2026-09-24T22:35:16.4664043+05:30",
+                       "DurationSeconds":  3.107
+                   },
+                   {
+                       "Name":  "Production extension build",
+                       "Command":  "npm.cmd run build",
+                       "ExitCode":  0,
+                       "StartedAt":  "2026-09-24T22:35:16.4953867+05:30",
+                       "FinishedAt":  "2026-09-24T22:35:18.4101630+05:30",
+                       "DurationSeconds":  1.915
+                   },
+                   {
+                       "Name":  "Unit tests",
+                       "Command":  "npm.cmd run test:unit",
+                       "ExitCode":  0,
+                       "StartedAt":  "2026-09-24T22:35:18.4141651+05:30",
+                       "FinishedAt":  "2026-09-24T22:35:21.2401214+05:30",
+                       "DurationSeconds":  2.826
+                   },
+                   {
+                       "Name":  "TypeScript integration tests",
+                       "Command":  "npm.cmd run test:integration",
+                       "ExitCode":  0,
+                       "StartedAt":  "2026-09-24T22:35:21.2421177+05:30",
+                       "FinishedAt":  "2026-09-24T22:35:24.2188094+05:30",
+                       "DurationSeconds":  2.977
+                   },
+                   {
+                       "Name":  "Python event contract integration",
+                       "Command":  "python -m pytest tests/integration/test_event_contract.py -q",
+                       "ExitCode":  0,
+                       "StartedAt":  "2026-09-24T22:35:24.2208104+05:30",
+                       "FinishedAt":  "2026-09-24T22:35:26.2485137+05:30",
+                       "DurationSeconds":  2.028
+                   },
+                   {
+                       "Name":  "Full Chromium browser suite",
+                       "Command":  "npm.cmd run test:browser",
+                       "ExitCode":  0,
+                       "StartedAt":  "2026-09-24T22:35:26.2513241+05:30",
+                       "FinishedAt":  "2026-09-24T22:36:45.5376628+05:30",
+                       "DurationSeconds":  79.286
+                   },
+                   {
+                       "Name":  "TSFEG Chromium/FastAPI/PostgreSQL restart and privacy verification",
+                       "Command":  "node scripts/verify-tsfeg.mjs",
+                       "ExitCode":  0,
+                       "StartedAt":  "2026-09-24T22:36:45.5426512+05:30",
+                       "FinishedAt":  "2026-09-24T22:36:51.5338056+05:30",
+                       "DurationSeconds":  5.991
+                   },
+                   {
+                       "Name":  "Git whitespace check",
+                       "Command":  "git diff --check",
+                       "ExitCode":  0,
+                       "StartedAt":  "2026-09-24T22:36:51.5398207+05:30",
+                       "FinishedAt":  "2026-09-24T22:36:51.6466925+05:30",
+                       "DurationSeconds":  0.107
+                   }
+               ],
+    "git_status":  [
+                       "?? Upgrades/",
+                       "?? scripts/verify-stage-a.ps1"
+                   ],
+    "limitations":  [
+                        "This verifies the controlled local test environment and implemented contracts.",
+                        "It does not establish real-world phishing recall, false-positive rate, model calibration, or zero-day generalization.",
+                        "Closed Shadow DOM remains outside declared coverage.",
+                        "Unknown first-time navigation cannot be truthfully described as pre-request blocked unless a DNR rule already existed before the request.",
+                        "The current contextual model remains advisory until independent Stage B data/calibration work is complete."
+                    ]
+}
