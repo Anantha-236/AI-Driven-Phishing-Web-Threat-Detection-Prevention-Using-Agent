@@ -16,6 +16,8 @@ import { createSessionContainment } from '../core/enforcement/session-containmen
 import { createAgentEnforcementPlan } from '../core/agent/enforcement-plan';
 import { transitionAgent } from '../core/agent/state-machine';
 import type { AgentAction, AgentRiskState, EnforcementOutcome, RiskDecision } from '../core/agent/types';
+import { StageBOnnxAdapter } from '../core/stage-b-onnx-adapter';
+import { createStageBShadowController } from '../core/stage-b-shadow';
 
 const EVENTS_ENDPOINT = 'http://127.0.0.1:8000/api/v1/events/batch';
 const ASSESSMENTS_ENDPOINT = 'http://127.0.0.1:8000/api/v1/assessments';
@@ -65,6 +67,11 @@ function isDurableReport(payload: unknown): payload is EventSecurityReport {
 
 export function installTypedEvents() {
   let model: EventModelArtifact | null = null;
+  const stageBShadowController = createStageBShadowController(
+    new StageBOnnxAdapter(),
+    chrome.storage.session,
+  );
+  void stageBShadowController.initialize();
   void fetch(chrome.runtime.getURL('assets/event-model.json')).then(async response => {
     if (!response.ok) return;
     const raw = await response.text();
@@ -353,6 +360,16 @@ export function installTypedEvents() {
     const assessment = assessEventStreamDetailed(events, model, incomplete);
     if (!assessment) return;
     const { report, riskDecision } = assessment;
+    // Stage B remains observational only. It receives the same sanitized event
+    // episode and contextual extractor but cannot return or replace report/riskDecision.
+    void stageBShadowController.observe({
+      tabId: tab,
+      documentId: report.document_id,
+      eventSeq: report.event_seq,
+      events,
+      incomplete,
+      baselineScore: report.model_score,
+    }).catch(() => {});
     const current = await chrome.webNavigation.getFrame({ tabId: tab, frameId: 0 }).catch(() => null);
     if (!current || current.documentId !== report.document_id) return;
     if (!await saveReport(report)) return;
@@ -399,6 +416,7 @@ export function installTypedEvents() {
   chrome.tabs.onRemoved.addListener(tab => {
     void containment.release({ tabId: tab }).catch(() => {});
     void chrome.storage.session.remove([`security-report:${tab}`, `${AGENT_RUNTIME_PREFIX}${tab}`]);
+    void stageBShadowController.clear(tab).catch(() => {});
     void recorder.flush(tab).then(() => chrome.storage.session.remove(`tsfeg:${tab}`)).catch(() => {});
   });
 
@@ -427,8 +445,10 @@ export function installTypedEvents() {
         const durableStats = await durable.stats().catch(() => ({ count: 0, bytes: 0, dropped: 0, corrupt: 0 }));
         const frame = await chrome.webNavigation.getFrame({ tabId: tab, frameId: 0 }).catch(() => null);
         const agentRuntime = await readAgentRuntime(tab);
+        const stageBShadow = await stageBShadowController.read(tab);
         respond({ ok: true, report: frame && report?.document_id === frame.documentId ? report : null,
           agent_runtime: frame && agentRuntime?.document_id === frame.documentId ? agentRuntime : null,
+          stage_b_shadow: frame && stageBShadow?.document_id === frame.documentId ? stageBShadow : null,
           delivery: { backend_connected: health.connected, checked_at: health.checked_at,
             pending_events: state.pending.length, pending_report: !!pendingReport,
             dropped_events: state.dropped + state.content_dropped, content_delivery_errors: state.content_delivery_errors,
