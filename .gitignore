@@ -56,3 +56,17 @@ Upgrades/**/backups/
 Upgrades/*.zip
 Upgrades/Stage-A-Task-*/
 Upgrades/Stage-A-Agentic-Control-Plane-Planning/
+
+# ============================================================
+# LOCAL UPGRADE WORKSPACE - NEVER COMMIT
+# ============================================================
+Upgrades/Downloads/
+Upgrades/Development/
+Upgrades/Packages/
+Upgrades/Temp/
+
+# Upgrade delivery archives anywhere under Upgrades
+Upgrades/**/*.zip
+
+# Installer-created backups
+Upgrades/**/backups/
