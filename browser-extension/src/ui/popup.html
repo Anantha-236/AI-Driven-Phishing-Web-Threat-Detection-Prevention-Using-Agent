@@ -201,18 +201,23 @@
 <body>
   <div class="header">
     <div class="title">🛡️ CAPSTONE-1</div>
-    <div class="status-badge active">ACTIVE</div>
+    <div class="status-badge" id="runtime-status">CHECKING</div>
+  </div>
+  <div class="container details">
+    <p><strong>Research data delivery</strong><br><span id="delivery">Checking local backend...</span></p>
+    <button id="btn-retry">Retry pending delivery</button>
+    <p><strong>Known phishing URL protection</strong><br><span id="protection">Checking installed browser rules...</span></p>
+    <button id="btn-feed">Update phishing list</button>
+    <p>OpenPhish Community indicators are checked locally. Your browsing URLs are not sent to the feed provider. Exact listed URLs only; a URL absent from the list is not verified safe.</p>
   </div>
   
   <div id="threat-container" style="display: none;">
     <div class="container threat-display">
       <div class="threat-level" id="threat-level"></div>
       <div class="score-display">
-        Score: <span id="score">-</span> | Confidence: <span id="confidence">-</span>%
+        Risk: <span id="score">-</span><br>Confidence: <span id="confidence">-</span>
       </div>
-      <div class="confidence-bar">
-        <div class="confidence-fill" id="confidence-bar"></div>
-      </div>
+
     </div>
     
     <div class="container details">
@@ -239,15 +244,30 @@
       </div>
     </div>
     
-    <div class="actions">
-      <button class="btn-allow" id="btn-allow">Allow</button>
-      <button class="btn-report" id="btn-report">Report</button>
+    <div class="container details">
+      <p><strong>Apparent page purpose</strong><br><span id="purpose"></span></p>
+      <p><strong>Evidence completeness</strong><br><span id="completeness"></span></p>
+      <p><strong>Supporting consistency evidence</strong></p>
+      <ul id="positive-evidence" class="reason-list"></ul>
+      <p><strong>Contextual contradictions</strong></p>
+      <ul id="contradictions" class="reason-list"></ul>
+      <p><strong>Machine learning</strong><br><span id="model"></span></p>
+      <p><strong>Decision agent</strong><br><span id="agent"></span></p>
+      <p><strong>Observed destinations</strong><br><span id="destinations"></span></p>
+      <p><strong>Website identity</strong><br><span id="identity"></span></p>
+      <p><strong>Form destinations before submission</strong></p>
+      <ul id="form-destinations" class="reason-list"></ul>
+      <p id="unknowns"></p>
+      <p><strong>Privacy</strong><br>Password, OTP, card/CVV, identity and recovery values, form values, request bodies, cookies, authorization headers, tokens and clipboard data are not collected.</p>
+      <p id="recommendation"></p><p id="performance"></p>
+      <button id="btn-refresh">Refresh assessment</button>
+      <button id="btn-export">Download detailed JSON report</button>
     </div>
   </div>
   
   <div id="status-idle" class="container status-idle">
-    <strong>Ready</strong>
-    Waiting for page analysis...
+    <strong>No current page evidence</strong>
+    No current document assessment is available. Open a supported web page.
   </div>
   
   <script type="module" src="popup.ts"></script>

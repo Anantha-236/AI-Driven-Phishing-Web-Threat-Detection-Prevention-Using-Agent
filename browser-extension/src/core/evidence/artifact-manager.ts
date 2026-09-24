@@ -1,3 +1,4 @@
+import { safeOrigin, SENSITIVE_TYPES } from "../tsfeg";
 import { SCHEMA_V3_VERSION } from "../schema/version";
 import {
   PageArtifact,
@@ -27,7 +28,8 @@ export class ArtifactManager {
   private navigations: Map<string, NavigationArtifact> = new Map();
   private relationships: EvidenceRelationship[] = [];
 
-  public createPageArtifact(url: string, title: string): PageArtifact {
+  public createPageArtifact(url: string, _title: string, _privacyPolicyUrl?: string, _termsUrl?: string): PageArtifact {
+    url = safeOrigin(url) || "";
     let domain = "";
     let isHTTPS = false;
     try {
@@ -44,10 +46,11 @@ export class ArtifactManager {
       timestamp: Date.now(),
       url,
       domain,
-      title,
+      title: "",
       formIds: [],
       scriptCount: 0,
-      isHTTPS
+      isHTTPS,
+      policyLinkLabels: []
     };
     this.page = page;
     return page;
@@ -67,7 +70,7 @@ export class ArtifactManager {
       capture?: string;
       isRequired?: boolean;
     }>,
-    target?: string
+    _target?: string
   ): FormArtifact {
     if (!this.page) {
       throw new Error("PageArtifact must be created before FormArtifact");
@@ -78,7 +81,7 @@ export class ArtifactManager {
     try {
       if (action) {
         const actionUrl = new URL(action, this.page.url);
-        isCrossDomain = actionUrl.hostname !== this.page.domain;
+        isCrossDomain = actionUrl.origin !== this.page.url;
       }
     } catch {
       isCrossDomain = false;
@@ -87,7 +90,7 @@ export class ArtifactManager {
     const inputIds: string[] = [];
     let hasPassword = false;
     let hasOtp = false;
-    const autocompleteAttrs: string[] = [];
+    const autocompleteAttrs: [] = [];
     const formDataTypes = new Set<DataTypeCategory>();
 
     for (const inputData of inputElementsData) {
@@ -103,7 +106,11 @@ export class ArtifactManager {
         isRequired: inputData.isRequired
       };
 
-      const detectedTypes = classifyInputDataTypes(structMeta);
+      const detectedTypes = [...new Set(classifyInputDataTypes(structMeta).map((type): DataTypeCategory => {
+        if (type === "PAYMENT_CARD") return "CARD";
+        if (type === "IDENTITY_DOCUMENT") return "ID";
+        return (SENSITIVE_TYPES as readonly string[]).includes(type) ? type : "OTHER_SENSITIVE";
+      }))];
       detectedTypes.forEach((t) => formDataTypes.add(t));
 
       const isPass = detectedTypes.includes("PASSWORD") || inputData.inputType.toLowerCase() === "password";
@@ -111,7 +118,7 @@ export class ArtifactManager {
 
       if (isPass) hasPassword = true;
       if (isOtpField) hasOtp = true;
-      if (inputData.autocomplete) autocompleteAttrs.push(inputData.autocomplete);
+
 
       const inputArtifact: InputArtifact = {
         id: generateId("input"),
@@ -119,10 +126,10 @@ export class ArtifactManager {
         formId,
         pageId: this.page.id,
         timestamp: Date.now(),
-        inputType: inputData.inputType,
-        name: inputData.name,
-        idAttribute: inputData.idAttribute,
-        autocomplete: inputData.autocomplete,
+        inputType: ["password", "email", "tel", "text", "number", "file", "checkbox", "radio", "submit", "select", "textarea"].includes(inputData.inputType) ? inputData.inputType : "text",
+        name: "",
+        idAttribute: "",
+        autocomplete: "",
         isPassword: isPass,
         isOtp: isOtpField,
         detectedDataTypes: detectedTypes,
@@ -144,15 +151,15 @@ export class ArtifactManager {
       type: "form",
       pageId: this.page.id,
       timestamp: Date.now(),
-      action,
+      action: safeOrigin(action, this.page.url) || "",
       isCrossDomain,
-      method: method.toUpperCase() || "GET",
+      method: method.toUpperCase() === "POST" ? "POST" : "GET",
       inputIds,
       hasPasswordField: hasPassword,
       hasOtpField: hasOtp,
       autocompleteAttributes: autocompleteAttrs,
       detectedDataTypes: Array.from(formDataTypes),
-      target
+      target: ""
     };
 
     this.forms.set(formId, formArtifact);
@@ -187,7 +194,7 @@ export class ArtifactManager {
       type: "script",
       pageId: this.page.id,
       timestamp: Date.now(),
-      src,
+      src: safeOrigin(src, this.page.url) || undefined,
       isInline,
       isCrossDomain
     };
@@ -213,8 +220,8 @@ export class ArtifactManager {
       id: generateId("nav"),
       type: "navigation",
       timestamp: Date.now(),
-      targetUrl,
-      referrer,
+      targetUrl: safeOrigin(targetUrl) || "",
+      referrer: safeOrigin(referrer) || "",
       pageId: this.page.id
     };
 

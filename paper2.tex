@@ -1,0 +1,80 @@
+\documentclass[journal]{IEEEtran}
+
+\title{Robust Local Machine Learning for Evolving Web Phishing: An Evaluation Protocol for Browser-Derived Evidence}
+\author{CAPSTONE-1 Research Team}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This manuscript defines an evaluation protocol for compact local models used in browser phishing assessment. It separates URL, DOM, form, sensitive-data, domain, network, and behavior feature families; audits leakage; and evaluates temporal, unseen-domain, and adversarial generalization. The current repository contains a 20-sample, 98-feature prototype dataset and a deterministic browser model. No final research result is claimed in this draft.
+\end{abstract}
+
+\begin{IEEEkeywords}
+phishing detection, machine learning, browser security, temporal generalization, unseen domains, adversarial evaluation, ONNX
+\end{IEEEkeywords}
+
+\section{Introduction}
+Web phishing models can appear effective when samples share domains, templates, or collection artifacts. This paper focuses on whether compact local models generalize beyond those shortcuts and whether their browser deployment reproduces the selected research model.
+
+\section{Related Work}
+The related-work scope includes URL and webpage features, visual phishing systems \cite{lin2021phishpedia}, intention-based analysis, pre-submit leakage measurement \cite{senol2022leakyforms}, and browser information-flow analysis \cite{siby2022webgraph}. The literature matrix records verified and pending sources separately.
+
+\section{Dataset}
+The current dataset metadata records 20 samples, 11 legitimate and 9 phishing, with 98 features and provenance categories including curated ground truth, controlled adversarial samples, and counterfactual controlled experiments. These facts describe the artifact; they do not establish external validity.
+
+\section{Data Collection}
+Every sample must record source, collection method, time period, label method, domain, provenance class, and licensing. Real, controlled, and synthetic observations must not be silently combined.
+
+\section{Data Cleaning}
+Cleaning must document duplicate URLs, exact samples, near-duplicate templates, nulls, malformed observations, and label conflicts without deleting difficult examples merely to improve metrics.
+
+\section{Leakage Analysis}
+Before final evaluation, audit exact duplicates, URLs, domains, templates, page content, brands, and time. The repository's current small audit is an initial artifact audit, not evidence that all generalization leakage is eliminated.
+
+\section{Feature Engineering}
+The authoritative feature specification must define feature names, types, source, ordering, missing behavior, training use, browser use, and version. Python and browser semantics must be compared on identical vectors.
+
+\section{Baseline Models}
+At minimum evaluate logistic regression, random forest, and gradient boosting under URL-only, DOM-only, URL+DOM, sensitive-data, domain, network, behavior, and full configurations.
+
+\section{Proposed Model}
+The browser currently contains a deterministic prototype model. A research-trained model must be selected from leakage-audited experiments before it is represented as the final model.
+
+\section{Model Selection}
+Selection shall use predeclared metrics and operating points, including precision, recall, F1, ROC-AUC, PR-AUC, false-positive rate, false-negative rate, calibration, latency, memory, and CPU where applicable.
+
+\section{Experimental Protocol}
+Use repeated or otherwise justified splits, confidence intervals, temporal holdouts, unseen-domain holdouts, cross-domain tests, adversarial perturbations, and ablation studies. Report sample counts and uncertainty with every result.
+
+\section{Temporal Evaluation}
+Temporal evaluation is NOT_AVAILABLE in this draft until time-indexed data and a reproducible protocol are complete.
+
+\section{Unseen-Domain Evaluation}
+Unseen-domain evaluation is NOT_AVAILABLE in this draft until domain-disjoint manifests and sufficient samples are available.
+
+\section{Adversarial Evaluation}
+Adversarial evaluation must include mutation, IDN/punycode, IP-hosted, dynamic, hidden, redirect, obfuscation, and cloaking classes only where ethically and technically reproducible.
+
+\section{Ablation Study}
+Ablations must measure whether each feature family adds value or cost. More features must not be assumed to improve results.
+
+\section{Browser Deployment}
+The selected training model must be exported to ONNX with a manifest containing model, feature schema, dataset, threshold, configuration, and hash metadata.
+
+\section{Runtime Performance}
+Measure browser end-to-end P50/P95 latency, memory, CPU, model load cost, and network calls. Current browser latency is UNKNOWN.
+
+\section{Discussion}
+The primary research question is empirical: whether a compact local model can retain useful performance under domain and temporal shift while respecting the privacy boundary.
+
+\section{Limitations}
+The current dataset is too small to support broad claims, and the prototype browser model is not a final research model. Controlled evidence cannot substitute for independent, diverse, leakage-audited evaluation.
+
+\section{Conclusion}
+This manuscript provides a reproducible evaluation plan. It should remain an internal draft until the missing data, leakage, robustness, parity, and performance experiments are completed.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

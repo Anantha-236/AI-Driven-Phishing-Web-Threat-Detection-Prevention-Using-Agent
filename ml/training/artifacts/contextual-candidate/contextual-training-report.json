@@ -1,0 +1,1642 @@
+{
+  "protocol": "contextual-training-1",
+  "generated_at": "2026-09-18T01:19:37.625929+00:00",
+  "status": "EXPERIMENTALLY_VERIFIED_SYNTHETIC_PIPELINE",
+  "provenance": "SYNTHETIC",
+  "dataset_sha256": "6307726db7b5933721cab2334d0395e1cc03f6dea1684cea4e4038475bc7e2f6",
+  "dataset_path": "C:\\Users\\anant\\OneDrive\\Desktop\\Capstone-1-GitHub-Ready\\.runtime\\contextual-training-dataset.json",
+  "episode_count": 192,
+  "feature_version": "context-features-1",
+  "representation": "contextual-flat",
+  "feature_names": [
+    "document_started",
+    "has_password",
+    "has_otp",
+    "has_payment",
+    "has_identity",
+    "purpose_authentication",
+    "purpose_payment",
+    "purpose_unknown",
+    "sensitive_form_count",
+    "same_origin_sensitive_target",
+    "cross_origin_sensitive_target",
+    "stable_sensitive_target",
+    "sensitive_target_changed",
+    "target_changed_after_interaction",
+    "submission_target_mismatch",
+    "https_downgrade_sensitive_target",
+    "password_then_otp",
+    "dynamic_sensitive_field",
+    "foreign_frame_sensitive_field",
+    "cross_request_near_interaction",
+    "unknown_document_ratio",
+    "known_target_ratio",
+    "contradiction_count",
+    "positive_evidence_count",
+    "purpose_sensitive_mismatch",
+    "purpose_context_consistent",
+    "purpose_observed"
+  ],
+  "seed": 42,
+  "split_manifest": {
+    "partition_order": [
+      "train",
+      "selection",
+      "calibration",
+      "test"
+    ],
+    "partitions": {
+      "train": {
+        "sample_count": 96,
+        "legitimate": 48,
+        "phishing": 48,
+        "session_ids": [
+          "synthetic-00-0-0",
+          "synthetic-00-0-1",
+          "synthetic-00-1-0",
+          "synthetic-00-1-1",
+          "synthetic-00-2-0",
+          "synthetic-00-2-1",
+          "synthetic-00-3-0",
+          "synthetic-00-3-1",
+          "synthetic-00-4-0",
+          "synthetic-00-4-1",
+          "synthetic-00-5-0",
+          "synthetic-00-5-1",
+          "synthetic-01-0-0",
+          "synthetic-01-0-1",
+          "synthetic-01-1-0",
+          "synthetic-01-1-1",
+          "synthetic-01-2-0",
+          "synthetic-01-2-1",
+          "synthetic-01-3-0",
+          "synthetic-01-3-1",
+          "synthetic-01-4-0",
+          "synthetic-01-4-1",
+          "synthetic-01-5-0",
+          "synthetic-01-5-1",
+          "synthetic-02-0-0",
+          "synthetic-02-0-1",
+          "synthetic-02-1-0",
+          "synthetic-02-1-1",
+          "synthetic-02-2-0",
+          "synthetic-02-2-1",
+          "synthetic-02-3-0",
+          "synthetic-02-3-1",
+          "synthetic-02-4-0",
+          "synthetic-02-4-1",
+          "synthetic-02-5-0",
+          "synthetic-02-5-1",
+          "synthetic-03-0-0",
+          "synthetic-03-0-1",
+          "synthetic-03-1-0",
+          "synthetic-03-1-1",
+          "synthetic-03-2-0",
+          "synthetic-03-2-1",
+          "synthetic-03-3-0",
+          "synthetic-03-3-1",
+          "synthetic-03-4-0",
+          "synthetic-03-4-1",
+          "synthetic-03-5-0",
+          "synthetic-03-5-1",
+          "synthetic-04-0-0",
+          "synthetic-04-0-1",
+          "synthetic-04-1-0",
+          "synthetic-04-1-1",
+          "synthetic-04-2-0",
+          "synthetic-04-2-1",
+          "synthetic-04-3-0",
+          "synthetic-04-3-1",
+          "synthetic-04-4-0",
+          "synthetic-04-4-1",
+          "synthetic-04-5-0",
+          "synthetic-04-5-1",
+          "synthetic-05-0-0",
+          "synthetic-05-0-1",
+          "synthetic-05-1-0",
+          "synthetic-05-1-1",
+          "synthetic-05-2-0",
+          "synthetic-05-2-1",
+          "synthetic-05-3-0",
+          "synthetic-05-3-1",
+          "synthetic-05-4-0",
+          "synthetic-05-4-1",
+          "synthetic-05-5-0",
+          "synthetic-05-5-1",
+          "synthetic-06-0-0",
+          "synthetic-06-0-1",
+          "synthetic-06-1-0",
+          "synthetic-06-1-1",
+          "synthetic-06-2-0",
+          "synthetic-06-2-1",
+          "synthetic-06-3-0",
+          "synthetic-06-3-1",
+          "synthetic-06-4-0",
+          "synthetic-06-4-1",
+          "synthetic-06-5-0",
+          "synthetic-06-5-1",
+          "synthetic-07-0-0",
+          "synthetic-07-0-1",
+          "synthetic-07-1-0",
+          "synthetic-07-1-1",
+          "synthetic-07-2-0",
+          "synthetic-07-2-1",
+          "synthetic-07-3-0",
+          "synthetic-07-3-1",
+          "synthetic-07-4-0",
+          "synthetic-07-4-1",
+          "synthetic-07-5-0",
+          "synthetic-07-5-1"
+        ]
+      },
+      "selection": {
+        "sample_count": 24,
+        "legitimate": 12,
+        "phishing": 12,
+        "session_ids": [
+          "synthetic-08-0-0",
+          "synthetic-08-0-1",
+          "synthetic-08-1-0",
+          "synthetic-08-1-1",
+          "synthetic-08-2-0",
+          "synthetic-08-2-1",
+          "synthetic-08-3-0",
+          "synthetic-08-3-1",
+          "synthetic-08-4-0",
+          "synthetic-08-4-1",
+          "synthetic-08-5-0",
+          "synthetic-08-5-1",
+          "synthetic-09-0-0",
+          "synthetic-09-0-1",
+          "synthetic-09-1-0",
+          "synthetic-09-1-1",
+          "synthetic-09-2-0",
+          "synthetic-09-2-1",
+          "synthetic-09-3-0",
+          "synthetic-09-3-1",
+          "synthetic-09-4-0",
+          "synthetic-09-4-1",
+          "synthetic-09-5-0",
+          "synthetic-09-5-1"
+        ]
+      },
+      "calibration": {
+        "sample_count": 24,
+        "legitimate": 12,
+        "phishing": 12,
+        "session_ids": [
+          "synthetic-10-0-0",
+          "synthetic-10-0-1",
+          "synthetic-10-1-0",
+          "synthetic-10-1-1",
+          "synthetic-10-2-0",
+          "synthetic-10-2-1",
+          "synthetic-10-3-0",
+          "synthetic-10-3-1",
+          "synthetic-10-4-0",
+          "synthetic-10-4-1",
+          "synthetic-10-5-0",
+          "synthetic-10-5-1",
+          "synthetic-11-0-0",
+          "synthetic-11-0-1",
+          "synthetic-11-1-0",
+          "synthetic-11-1-1",
+          "synthetic-11-2-0",
+          "synthetic-11-2-1",
+          "synthetic-11-3-0",
+          "synthetic-11-3-1",
+          "synthetic-11-4-0",
+          "synthetic-11-4-1",
+          "synthetic-11-5-0",
+          "synthetic-11-5-1"
+        ]
+      },
+      "test": {
+        "sample_count": 48,
+        "legitimate": 24,
+        "phishing": 24,
+        "session_ids": [
+          "synthetic-12-0-0",
+          "synthetic-12-0-1",
+          "synthetic-12-1-0",
+          "synthetic-12-1-1",
+          "synthetic-12-2-0",
+          "synthetic-12-2-1",
+          "synthetic-12-3-0",
+          "synthetic-12-3-1",
+          "synthetic-12-4-0",
+          "synthetic-12-4-1",
+          "synthetic-12-5-0",
+          "synthetic-12-5-1",
+          "synthetic-13-0-0",
+          "synthetic-13-0-1",
+          "synthetic-13-1-0",
+          "synthetic-13-1-1",
+          "synthetic-13-2-0",
+          "synthetic-13-2-1",
+          "synthetic-13-3-0",
+          "synthetic-13-3-1",
+          "synthetic-13-4-0",
+          "synthetic-13-4-1",
+          "synthetic-13-5-0",
+          "synthetic-13-5-1",
+          "synthetic-14-0-0",
+          "synthetic-14-0-1",
+          "synthetic-14-1-0",
+          "synthetic-14-1-1",
+          "synthetic-14-2-0",
+          "synthetic-14-2-1",
+          "synthetic-14-3-0",
+          "synthetic-14-3-1",
+          "synthetic-14-4-0",
+          "synthetic-14-4-1",
+          "synthetic-14-5-0",
+          "synthetic-14-5-1",
+          "synthetic-15-0-0",
+          "synthetic-15-0-1",
+          "synthetic-15-1-0",
+          "synthetic-15-1-1",
+          "synthetic-15-2-0",
+          "synthetic-15-2-1",
+          "synthetic-15-3-0",
+          "synthetic-15-3-1",
+          "synthetic-15-4-0",
+          "synthetic-15-4-1",
+          "synthetic-15-5-0",
+          "synthetic-15-5-1"
+        ]
+      }
+    },
+    "group_checks": {
+      "domain_group": {
+        "status": "UNAVAILABLE",
+        "reason": "Missing externally meaningful group labels"
+      },
+      "brand_group": {
+        "status": "UNAVAILABLE",
+        "reason": "Missing externally meaningful group labels"
+      },
+      "template_group": {
+        "status": "PASS",
+        "unique_groups": 16,
+        "groups_by_partition": {
+          "train": [
+            "authored-structure-00",
+            "authored-structure-01",
+            "authored-structure-02",
+            "authored-structure-03",
+            "authored-structure-04",
+            "authored-structure-05",
+            "authored-structure-06",
+            "authored-structure-07"
+          ],
+          "selection": [
+            "authored-structure-08",
+            "authored-structure-09"
+          ],
+          "calibration": [
+            "authored-structure-10",
+            "authored-structure-11"
+          ],
+          "test": [
+            "authored-structure-12",
+            "authored-structure-13",
+            "authored-structure-14",
+            "authored-structure-15"
+          ]
+        },
+        "scope": "SYNTHETIC_PIPELINE_ONLY"
+      },
+      "pair_id": {
+        "status": "PASS",
+        "unique_groups": 96,
+        "groups_by_partition": {
+          "train": [
+            "synthetic-pair-00-0",
+            "synthetic-pair-00-1",
+            "synthetic-pair-00-2",
+            "synthetic-pair-00-3",
+            "synthetic-pair-00-4",
+            "synthetic-pair-00-5",
+            "synthetic-pair-01-0",
+            "synthetic-pair-01-1",
+            "synthetic-pair-01-2",
+            "synthetic-pair-01-3",
+            "synthetic-pair-01-4",
+            "synthetic-pair-01-5",
+            "synthetic-pair-02-0",
+            "synthetic-pair-02-1",
+            "synthetic-pair-02-2",
+            "synthetic-pair-02-3",
+            "synthetic-pair-02-4",
+            "synthetic-pair-02-5",
+            "synthetic-pair-03-0",
+            "synthetic-pair-03-1",
+            "synthetic-pair-03-2",
+            "synthetic-pair-03-3",
+            "synthetic-pair-03-4",
+            "synthetic-pair-03-5",
+            "synthetic-pair-04-0",
+            "synthetic-pair-04-1",
+            "synthetic-pair-04-2",
+            "synthetic-pair-04-3",
+            "synthetic-pair-04-4",
+            "synthetic-pair-04-5",
+            "synthetic-pair-05-0",
+            "synthetic-pair-05-1",
+            "synthetic-pair-05-2",
+            "synthetic-pair-05-3",
+            "synthetic-pair-05-4",
+            "synthetic-pair-05-5",
+            "synthetic-pair-06-0",
+            "synthetic-pair-06-1",
+            "synthetic-pair-06-2",
+            "synthetic-pair-06-3",
+            "synthetic-pair-06-4",
+            "synthetic-pair-06-5",
+            "synthetic-pair-07-0",
+            "synthetic-pair-07-1",
+            "synthetic-pair-07-2",
+            "synthetic-pair-07-3",
+            "synthetic-pair-07-4",
+            "synthetic-pair-07-5"
+          ],
+          "selection": [
+            "synthetic-pair-08-0",
+            "synthetic-pair-08-1",
+            "synthetic-pair-08-2",
+            "synthetic-pair-08-3",
+            "synthetic-pair-08-4",
+            "synthetic-pair-08-5",
+            "synthetic-pair-09-0",
+            "synthetic-pair-09-1",
+            "synthetic-pair-09-2",
+            "synthetic-pair-09-3",
+            "synthetic-pair-09-4",
+            "synthetic-pair-09-5"
+          ],
+          "calibration": [
+            "synthetic-pair-10-0",
+            "synthetic-pair-10-1",
+            "synthetic-pair-10-2",
+            "synthetic-pair-10-3",
+            "synthetic-pair-10-4",
+            "synthetic-pair-10-5",
+            "synthetic-pair-11-0",
+            "synthetic-pair-11-1",
+            "synthetic-pair-11-2",
+            "synthetic-pair-11-3",
+            "synthetic-pair-11-4",
+            "synthetic-pair-11-5"
+          ],
+          "test": [
+            "synthetic-pair-12-0",
+            "synthetic-pair-12-1",
+            "synthetic-pair-12-2",
+            "synthetic-pair-12-3",
+            "synthetic-pair-12-4",
+            "synthetic-pair-12-5",
+            "synthetic-pair-13-0",
+            "synthetic-pair-13-1",
+            "synthetic-pair-13-2",
+            "synthetic-pair-13-3",
+            "synthetic-pair-13-4",
+            "synthetic-pair-13-5",
+            "synthetic-pair-14-0",
+            "synthetic-pair-14-1",
+            "synthetic-pair-14-2",
+            "synthetic-pair-14-3",
+            "synthetic-pair-14-4",
+            "synthetic-pair-14-5",
+            "synthetic-pair-15-0",
+            "synthetic-pair-15-1",
+            "synthetic-pair-15-2",
+            "synthetic-pair-15-3",
+            "synthetic-pair-15-4",
+            "synthetic-pair-15-5"
+          ]
+        },
+        "scope": "SYNTHETIC_PIPELINE_ONLY"
+      },
+      "temporal": {
+        "status": "PASS",
+        "time_basis": [
+          "SYNTHETIC_LOGICAL_CLOCK"
+        ],
+        "scope": "SYNTHETIC_PIPELINE_ONLY"
+      }
+    }
+  },
+  "protocol_controls": {
+    "model_selection": "Maximum selection-set average precision; ties use lower Brier score, then declaration order.",
+    "calibration": "Independent calibration set: sigmoid fit on clipped base log odds; no refit on test data.",
+    "threshold": 0.5,
+    "threshold_policy": "Predeclared diagnostic threshold; not a prevention operating point.",
+    "test_policy": "Evaluated after selected model and calibration parameters are frozen; not used for selection.",
+    "confidence_policy": "Calibration on authored data is not real-world confidence.",
+    "hyperparameters_fixed": true
+  },
+  "environment": {
+    "python": "3.12.10",
+    "packages": {
+      "numpy": "2.5.2",
+      "scikit-learn": "1.9.0",
+      "onnx": "1.22.0",
+      "onnxruntime": "1.28.0",
+      "skl2onnx": "1.20.0"
+    }
+  },
+  "source_hashes": {
+    "ml/training/train_models.py": "27f0dedf21a6d9e9707920106b43157a711055556d4c414a7ecd12284f5af36c",
+    "ml/evaluation/contextual_eval.py": "f7e511e1ce847372b80e171f7df9dbb18daf20ca8394b72e5c41509647d2c3d7",
+    "ml/data/build_context_dataset.py": "4c55b1040af625bd3506219385fedf6503e7cee42381f72b61e94d5a8ac8669b",
+    "browser-extension/src/core/tsfeg.ts": "378447828cdef915d87e494d3b6e66840f049c94201fc244024dde3ef52616db"
+  },
+  "limitations": [
+    "Not collected from a browser or real websites.",
+    "Authored labels are fixture intent, not independently verified phishing ground truth.",
+    "Synthetic template and logical-time isolation are pipeline checks, not service generalization.",
+    "Domain and brand labels are unavailable. All samples share one authored generator.",
+    "Opaque pairs intentionally share observable features across opposing intent labels."
+  ],
+  "model_comparison": {
+    "LogisticRegression": {
+      "fit_partition": "train",
+      "fit_samples": 96,
+      "train_time_ms": 8.719299992662854,
+      "selection": {
+        "sample_count": 24,
+        "threshold": 0.5,
+        "accuracy": 0.8333333333333334,
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "average_precision": 0.9390873015873016,
+        "pr_auc_trapezoidal": 0.9495039682539683,
+        "roc_auc": 0.9444444444444444,
+        "fpr": 0.0,
+        "fnr": 0.3333333333333333,
+        "fpr_wilson_95": [
+          2.7755575615628914e-17,
+          0.24249400665524085
+        ],
+        "fnr_wilson_95": [
+          0.13812009109121315,
+          0.6093779111272004
+        ],
+        "interval_limitation": "Binomial reference assumes independent trials; dependent authored fixtures do not establish population error bounds.",
+        "confusion_matrix": {
+          "tn": 12,
+          "fp": 0,
+          "fn": 4,
+          "tp": 8
+        },
+        "brier_score": 0.08416596109373631,
+        "log_loss": 0.24965642890388554,
+        "expected_calibration_error_5_bins": 0.02643771924720363,
+        "calibration_bins": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 8,
+            "mean_score": 0.03869340814526128,
+            "observed_fraction": 0.0
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6000000000000001,
+            "count": 8,
+            "mean_score": 0.47413724846577243,
+            "observed_fraction": 0.5
+          },
+          {
+            "lower": 0.6000000000000001,
+            "upper": 0.8,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.8,
+            "upper": 1.0,
+            "count": 8,
+            "mean_score": 0.985243001937878,
+            "observed_fraction": 1.0
+          }
+        ]
+      },
+      "calibration": {
+        "method": "sigmoid",
+        "coefficient": 2.925960588182865,
+        "intercept": 0.21782697615418972,
+        "input": "base_log_odds",
+        "fit_partition": "calibration",
+        "fit_sample_count": 24,
+        "evidence_scope": "SYNTHETIC",
+        "real_world_calibration_verified": false
+      },
+      "test_uncalibrated": {
+        "sample_count": 48,
+        "threshold": 0.5,
+        "accuracy": 0.8333333333333334,
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "average_precision": 0.9390873015873016,
+        "pr_auc_trapezoidal": 0.9495039682539683,
+        "roc_auc": 0.9444444444444444,
+        "fpr": 0.0,
+        "fnr": 0.3333333333333333,
+        "fpr_wilson_95": [
+          1.3877787807814457e-17,
+          0.13797620467498017
+        ],
+        "fnr_wilson_95": [
+          0.1797219032729775,
+          0.5329368316186824
+        ],
+        "interval_limitation": "Binomial reference assumes independent trials; dependent authored fixtures do not establish population error bounds.",
+        "confusion_matrix": {
+          "tn": 24,
+          "fp": 0,
+          "fn": 8,
+          "tp": 16
+        },
+        "brier_score": 0.08416596109373631,
+        "log_loss": 0.24965642890388554,
+        "expected_calibration_error_5_bins": 0.026437719247203628,
+        "calibration_bins": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 16,
+            "mean_score": 0.038693408145261274,
+            "observed_fraction": 0.0
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6000000000000001,
+            "count": 16,
+            "mean_score": 0.47413724846577243,
+            "observed_fraction": 0.5
+          },
+          {
+            "lower": 0.6000000000000001,
+            "upper": 0.8,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.8,
+            "upper": 1.0,
+            "count": 16,
+            "mean_score": 0.985243001937878,
+            "observed_fraction": 1.0
+          }
+        ]
+      },
+      "test_calibrated": {
+        "sample_count": 48,
+        "threshold": 0.5,
+        "accuracy": 0.8333333333333334,
+        "precision": 0.9,
+        "recall": 0.75,
+        "f1": 0.8181818181818182,
+        "average_precision": 0.9390873015873016,
+        "pr_auc_trapezoidal": 0.9495039682539683,
+        "roc_auc": 0.9444444444444444,
+        "fpr": 0.08333333333333333,
+        "fnr": 0.25,
+        "fpr_wilson_95": [
+          0.023158815297043306,
+          0.25848802193210685
+        ],
+        "fnr_wilson_95": [
+          0.11999366228595004,
+          0.44899444005154004
+        ],
+        "interval_limitation": "Binomial reference assumes independent trials; dependent authored fixtures do not establish population error bounds.",
+        "confusion_matrix": {
+          "tn": 22,
+          "fp": 2,
+          "fn": 6,
+          "tp": 18
+        },
+        "brier_score": 0.08366384691578828,
+        "log_loss": 0.23174957320545297,
+        "expected_calibration_error_5_bins": 0.007121123042548883,
+        "calibration_bins": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 16,
+            "mean_score": 0.00010654797712679478,
+            "observed_fraction": 0.0
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6000000000000001,
+            "count": 16,
+            "mean_score": 0.4787485472866012,
+            "observed_fraction": 0.5
+          },
+          {
+            "lower": 0.6000000000000001,
+            "upper": 0.8,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.8,
+            "upper": 1.0,
+            "count": 16,
+            "mean_score": 0.9999946315628789,
+            "observed_fraction": 1.0
+          }
+        ]
+      }
+    },
+    "RandomForest": {
+      "fit_partition": "train",
+      "fit_samples": 96,
+      "train_time_ms": 62.878700002329424,
+      "selection": {
+        "sample_count": 24,
+        "threshold": 0.5,
+        "accuracy": 0.8333333333333334,
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "average_precision": 0.9390873015873016,
+        "pr_auc_trapezoidal": 0.9495039682539683,
+        "roc_auc": 0.9444444444444444,
+        "fpr": 0.0,
+        "fnr": 0.3333333333333333,
+        "fpr_wilson_95": [
+          2.7755575615628914e-17,
+          0.24249400665524085
+        ],
+        "fnr_wilson_95": [
+          0.13812009109121315,
+          0.6093779111272004
+        ],
+        "interval_limitation": "Binomial reference assumes independent trials; dependent authored fixtures do not establish population error bounds.",
+        "confusion_matrix": {
+          "tn": 12,
+          "fp": 0,
+          "fn": 4,
+          "tp": 8
+        },
+        "brier_score": 0.08732352435013851,
+        "log_loss": 0.2691370229013776,
+        "expected_calibration_error_5_bins": 0.05587180400010763,
+        "calibration_bins": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 8,
+            "mean_score": 0.0788174134644689,
+            "observed_fraction": 0.0
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6000000000000001,
+            "count": 8,
+            "mean_score": 0.4331839036263112,
+            "observed_fraction": 0.5
+          },
+          {
+            "lower": 0.6000000000000001,
+            "upper": 0.8,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.8,
+            "upper": 1.0,
+            "count": 8,
+            "mean_score": 0.9780180978378348,
+            "observed_fraction": 1.0
+          }
+        ]
+      },
+      "calibration": {
+        "method": "sigmoid",
+        "coefficient": 2.6289068965630635,
+        "intercept": 0.6463785505574972,
+        "input": "base_log_odds",
+        "fit_partition": "calibration",
+        "fit_sample_count": 24,
+        "evidence_scope": "SYNTHETIC",
+        "real_world_calibration_verified": false
+      },
+      "test_uncalibrated": {
+        "sample_count": 48,
+        "threshold": 0.5,
+        "accuracy": 0.8333333333333334,
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "average_precision": 0.9390873015873016,
+        "pr_auc_trapezoidal": 0.9495039682539683,
+        "roc_auc": 0.9444444444444444,
+        "fpr": 0.0,
+        "fnr": 0.3333333333333333,
+        "fpr_wilson_95": [
+          1.3877787807814457e-17,
+          0.13797620467498017
+        ],
+        "fnr_wilson_95": [
+          0.1797219032729775,
+          0.5329368316186824
+        ],
+        "interval_limitation": "Binomial reference assumes independent trials; dependent authored fixtures do not establish population error bounds.",
+        "confusion_matrix": {
+          "tn": 24,
+          "fp": 0,
+          "fn": 8,
+          "tp": 16
+        },
+        "brier_score": 0.08732352435013851,
+        "log_loss": 0.2691370229013776,
+        "expected_calibration_error_5_bins": 0.05587180400010767,
+        "calibration_bins": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 16,
+            "mean_score": 0.0788174134644689,
+            "observed_fraction": 0.0
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6000000000000001,
+            "count": 16,
+            "mean_score": 0.4331839036263112,
+            "observed_fraction": 0.5
+          },
+          {
+            "lower": 0.6000000000000001,
+            "upper": 0.8,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.8,
+            "upper": 1.0,
+            "count": 16,
+            "mean_score": 0.9780180978378347,
+            "observed_fraction": 1.0
+          }
+        ]
+      },
+      "test_calibrated": {
+        "sample_count": 48,
+        "threshold": 0.5,
+        "accuracy": 0.8333333333333334,
+        "precision": 0.9,
+        "recall": 0.75,
+        "f1": 0.8181818181818182,
+        "average_precision": 0.9390873015873016,
+        "pr_auc_trapezoidal": 0.9495039682539683,
+        "roc_auc": 0.9444444444444444,
+        "fpr": 0.08333333333333333,
+        "fnr": 0.25,
+        "fpr_wilson_95": [
+          0.023158815297043306,
+          0.25848802193210685
+        ],
+        "fnr_wilson_95": [
+          0.11999366228595004,
+          0.44899444005154004
+        ],
+        "interval_limitation": "Binomial reference assumes independent trials; dependent authored fixtures do not establish population error bounds.",
+        "confusion_matrix": {
+          "tn": 22,
+          "fp": 2,
+          "fn": 6,
+          "tp": 18
+        },
+        "brier_score": 0.08413767143557183,
+        "log_loss": 0.23382128203986183,
+        "expected_calibration_error_5_bins": 0.00625520896640161,
+        "calibration_bins": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 16,
+            "mean_score": 0.003442575007634645,
+            "observed_fraction": 0.0
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6000000000000001,
+            "count": 16,
+            "mean_score": 0.4847143444214342,
+            "observed_fraction": 0.5
+          },
+          {
+            "lower": 0.6000000000000001,
+            "upper": 0.8,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.8,
+            "upper": 1.0,
+            "count": 16,
+            "mean_score": 0.9999626036869956,
+            "observed_fraction": 1.0
+          }
+        ]
+      }
+    },
+    "GradientBoosting": {
+      "fit_partition": "train",
+      "fit_samples": 96,
+      "train_time_ms": 23.249100006069057,
+      "selection": {
+        "sample_count": 24,
+        "threshold": 0.5,
+        "accuracy": 0.8333333333333334,
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "average_precision": 0.9305555555555556,
+        "pr_auc_trapezoidal": 0.9513888888888888,
+        "roc_auc": 0.9444444444444444,
+        "fpr": 0.0,
+        "fnr": 0.3333333333333333,
+        "fpr_wilson_95": [
+          2.7755575615628914e-17,
+          0.24249400665524085
+        ],
+        "fnr_wilson_95": [
+          0.13812009109121315,
+          0.6093779111272004
+        ],
+        "interval_limitation": "Binomial reference assumes independent trials; dependent authored fixtures do not establish population error bounds.",
+        "confusion_matrix": {
+          "tn": 12,
+          "fp": 0,
+          "fn": 4,
+          "tp": 8
+        },
+        "brier_score": 0.0835414654528039,
+        "log_loss": 0.24041997936645107,
+        "expected_calibration_error_5_bins": 0.012792004068236263,
+        "calibration_bins": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 8,
+            "mean_score": 0.019299363942699793,
+            "observed_fraction": 0.0
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6000000000000001,
+            "count": 8,
+            "mean_score": 0.48922925579669346,
+            "observed_fraction": 0.5
+          },
+          {
+            "lower": 0.6000000000000001,
+            "upper": 0.8,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.8,
+            "upper": 1.0,
+            "count": 8,
+            "mean_score": 0.9916940959412975,
+            "observed_fraction": 1.0
+          }
+        ]
+      },
+      "calibration": {
+        "method": "sigmoid",
+        "coefficient": 2.613783315670755,
+        "intercept": 0.11267659175336464,
+        "input": "base_log_odds",
+        "fit_partition": "calibration",
+        "fit_sample_count": 24,
+        "evidence_scope": "SYNTHETIC",
+        "real_world_calibration_verified": false
+      },
+      "test_uncalibrated": {
+        "sample_count": 48,
+        "threshold": 0.5,
+        "accuracy": 0.8333333333333334,
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "average_precision": 0.9305555555555556,
+        "pr_auc_trapezoidal": 0.9513888888888888,
+        "roc_auc": 0.9444444444444444,
+        "fpr": 0.0,
+        "fnr": 0.3333333333333333,
+        "fpr_wilson_95": [
+          1.3877787807814457e-17,
+          0.13797620467498017
+        ],
+        "fnr_wilson_95": [
+          0.1797219032729775,
+          0.5329368316186824
+        ],
+        "interval_limitation": "Binomial reference assumes independent trials; dependent authored fixtures do not establish population error bounds.",
+        "confusion_matrix": {
+          "tn": 24,
+          "fp": 0,
+          "fn": 8,
+          "tp": 16
+        },
+        "brier_score": 0.0835414654528039,
+        "log_loss": 0.24041997936645107,
+        "expected_calibration_error_5_bins": 0.012792004068236263,
+        "calibration_bins": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 16,
+            "mean_score": 0.019299363942699793,
+            "observed_fraction": 0.0
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6000000000000001,
+            "count": 16,
+            "mean_score": 0.48922925579669346,
+            "observed_fraction": 0.5
+          },
+          {
+            "lower": 0.6000000000000001,
+            "upper": 0.8,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.8,
+            "upper": 1.0,
+            "count": 16,
+            "mean_score": 0.9916940959412975,
+            "observed_fraction": 1.0
+          }
+        ]
+      },
+      "test_calibrated": {
+        "sample_count": 48,
+        "threshold": 0.5,
+        "accuracy": 0.8333333333333334,
+        "precision": 0.8333333333333334,
+        "recall": 0.8333333333333334,
+        "f1": 0.8333333333333334,
+        "average_precision": 0.9305555555555556,
+        "pr_auc_trapezoidal": 0.9513888888888888,
+        "roc_auc": 0.9444444444444444,
+        "fpr": 0.16666666666666666,
+        "fnr": 0.16666666666666666,
+        "fpr_wilson_95": [
+          0.06678676328632951,
+          0.3585307064969906
+        ],
+        "fnr_wilson_95": [
+          0.06678676328632951,
+          0.3585307064969906
+        ],
+        "interval_limitation": "Binomial reference assumes independent trials; dependent authored fixtures do not establish population error bounds.",
+        "confusion_matrix": {
+          "tn": 20,
+          "fp": 4,
+          "fn": 4,
+          "tp": 20
+        },
+        "brier_score": 0.08336031094755042,
+        "log_loss": 0.23112035322965005,
+        "expected_calibration_error_5_bins": 2.101806984367781e-05,
+        "calibration_bins": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 16,
+            "mean_score": 4.6159041128946606e-05,
+            "observed_fraction": 0.0
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6000000000000001,
+            "count": 16,
+            "mean_score": 0.5000110627986112,
+            "observed_fraction": 0.5
+          },
+          {
+            "lower": 0.6000000000000001,
+            "upper": 0.8,
+            "count": 0,
+            "mean_score": null,
+            "observed_fraction": null
+          },
+          {
+            "lower": 0.8,
+            "upper": 1.0,
+            "count": 16,
+            "mean_score": 0.9999941676302091,
+            "observed_fraction": 1.0
+          }
+        ]
+      }
+    }
+  },
+  "artifacts": {
+    "logistic_json": {
+      "path": "C:\\Users\\anant\\OneDrive\\Desktop\\Capstone-1-GitHub-Ready\\ml\\training\\artifacts\\contextual-candidate\\contextual-lr-candidate.json",
+      "sha256": "d1571132e8d156bf3a3835de3c95878123729f63afbc052d38488e62d99d472c",
+      "selected": true
+    },
+    "selected_onnx": {
+      "path": "C:\\Users\\anant\\OneDrive\\Desktop\\Capstone-1-GitHub-Ready\\ml\\training\\artifacts\\contextual-candidate\\contextual-selected-candidate.onnx",
+      "sha256": "f92881d77f8326d7d7181580d2891695888a2e45e152d752a781fa8575a3425f",
+      "selected_model": "LogisticRegression",
+      "feature_count": 27,
+      "output_names": [
+        "label",
+        "probabilities",
+        "calibrated_risk"
+      ],
+      "parity": {
+        "status": "PASS",
+        "vectors": 192,
+        "tolerance": 1e-05,
+        "maximum_base_probability_error": 5.7597600577885544e-08,
+        "maximum_calibrated_probability_error": 1.803041408399153e-07
+      }
+    }
+  },
+  "selected_model": "LogisticRegression",
+  "observable_ambiguity": {
+    "opposing_label_feature_vectors": 4,
+    "minimum_errors_from_identical_vectors": 8,
+    "maximum_accuracy_on_these_fixed_vectors": 0.8333333333333334,
+    "interpretation": "Descriptive bound for these fixed labels and vectors; no claim about real-world performance."
+  },
+  "test_predictions": [
+    {
+      "session_id": "synthetic-12-0-0",
+      "ground_truth": 0,
+      "base_score": 0.04196013865602007,
+      "calibrated_score": 0.00013167091945357696,
+      "scenario": "target_swap"
+    },
+    {
+      "session_id": "synthetic-12-0-1",
+      "ground_truth": 1,
+      "base_score": 0.993095752716795,
+      "calibrated_score": 0.9999996095708851,
+      "scenario": "target_swap"
+    },
+    {
+      "session_id": "synthetic-12-1-0",
+      "ground_truth": 0,
+      "base_score": 0.03387662625577733,
+      "calibrated_score": 6.869277485698916e-05,
+      "scenario": "payment_downgrade"
+    },
+    {
+      "session_id": "synthetic-12-1-1",
+      "ground_truth": 1,
+      "base_score": 0.9876415153546699,
+      "calibrated_score": 0.9999978204563758,
+      "scenario": "payment_downgrade"
+    },
+    {
+      "session_id": "synthetic-12-2-0",
+      "ground_truth": 0,
+      "base_score": 0.4670755433101423,
+      "calibrated_score": 0.45808011442431906,
+      "scenario": "opaque_sso"
+    },
+    {
+      "session_id": "synthetic-12-2-1",
+      "ground_truth": 1,
+      "base_score": 0.4670755433101423,
+      "calibrated_score": 0.45808011442431906,
+      "scenario": "opaque_sso"
+    },
+    {
+      "session_id": "synthetic-12-3-0",
+      "ground_truth": 0,
+      "base_score": 0.46675685930917343,
+      "calibrated_score": 0.4571502874463236,
+      "scenario": "opaque_password_otp"
+    },
+    {
+      "session_id": "synthetic-12-3-1",
+      "ground_truth": 1,
+      "base_score": 0.46675685930917343,
+      "calibrated_score": 0.4571502874463236,
+      "scenario": "opaque_password_otp"
+    },
+    {
+      "session_id": "synthetic-12-4-0",
+      "ground_truth": 0,
+      "base_score": 0.04196013865602007,
+      "calibrated_score": 0.00013167091945357696,
+      "scenario": "informational_password"
+    },
+    {
+      "session_id": "synthetic-12-4-1",
+      "ground_truth": 1,
+      "base_score": 0.9817063879306243,
+      "calibrated_score": 0.9999930110150523,
+      "scenario": "informational_password"
+    },
+    {
+      "session_id": "synthetic-12-5-0",
+      "ground_truth": 0,
+      "base_score": 0.034105729070513596,
+      "calibrated_score": 7.010946356883843e-05,
+      "scenario": "download_otp"
+    },
+    {
+      "session_id": "synthetic-12-5-1",
+      "ground_truth": 1,
+      "base_score": 0.9774082722169363,
+      "calibrated_score": 0.9999868734256699,
+      "scenario": "download_otp"
+    },
+    {
+      "session_id": "synthetic-13-0-0",
+      "ground_truth": 0,
+      "base_score": 0.043540149219507586,
+      "calibrated_score": 0.00014741813059713992,
+      "scenario": "target_swap"
+    },
+    {
+      "session_id": "synthetic-13-0-1",
+      "ground_truth": 1,
+      "base_score": 0.9933555338167962,
+      "calibrated_score": 0.9999996512820176,
+      "scenario": "target_swap"
+    },
+    {
+      "session_id": "synthetic-13-1-0",
+      "ground_truth": 0,
+      "base_score": 0.03516342385842931,
+      "calibrated_score": 7.690868097278751e-05,
+      "scenario": "payment_downgrade"
+    },
+    {
+      "session_id": "synthetic-13-1-1",
+      "ground_truth": 1,
+      "base_score": 0.9881040607955325,
+      "calibrated_score": 0.999998053305527,
+      "scenario": "payment_downgrade"
+    },
+    {
+      "session_id": "synthetic-13-2-0",
+      "ground_truth": 0,
+      "base_score": 0.4766982151448138,
+      "calibrated_score": 0.48623069788650186,
+      "scenario": "opaque_sso"
+    },
+    {
+      "session_id": "synthetic-13-2-1",
+      "ground_truth": 1,
+      "base_score": 0.4766982151448138,
+      "calibrated_score": 0.48623069788650186,
+      "scenario": "opaque_sso"
+    },
+    {
+      "session_id": "synthetic-13-3-0",
+      "ground_truth": 0,
+      "base_score": 0.48601837609896026,
+      "calibrated_score": 0.5135330893892602,
+      "scenario": "opaque_password_otp"
+    },
+    {
+      "session_id": "synthetic-13-3-1",
+      "ground_truth": 1,
+      "base_score": 0.48601837609896026,
+      "calibrated_score": 0.5135330893892602,
+      "scenario": "opaque_password_otp"
+    },
+    {
+      "session_id": "synthetic-13-4-0",
+      "ground_truth": 0,
+      "base_score": 0.043540149219507586,
+      "calibrated_score": 0.00014741813059713992,
+      "scenario": "informational_password"
+    },
+    {
+      "session_id": "synthetic-13-4-1",
+      "ground_truth": 1,
+      "base_score": 0.9823871080989718,
+      "calibrated_score": 0.9999937576723822,
+      "scenario": "informational_password"
+    },
+    {
+      "session_id": "synthetic-13-5-0",
+      "ground_truth": 0,
+      "base_score": 0.03540091022631467,
+      "calibrated_score": 7.84947975143094e-05,
+      "scenario": "download_otp"
+    },
+    {
+      "session_id": "synthetic-13-5-1",
+      "ground_truth": 1,
+      "base_score": 0.9782453845726974,
+      "calibrated_score": 0.9999882757751218,
+      "scenario": "download_otp"
+    },
+    {
+      "session_id": "synthetic-14-0-0",
+      "ground_truth": 0,
+      "base_score": 0.043540149219507586,
+      "calibrated_score": 0.00014741813059713992,
+      "scenario": "target_swap"
+    },
+    {
+      "session_id": "synthetic-14-0-1",
+      "ground_truth": 1,
+      "base_score": 0.9933555338167962,
+      "calibrated_score": 0.9999996512820176,
+      "scenario": "target_swap"
+    },
+    {
+      "session_id": "synthetic-14-1-0",
+      "ground_truth": 0,
+      "base_score": 0.03516342385842931,
+      "calibrated_score": 7.690868097278751e-05,
+      "scenario": "payment_downgrade"
+    },
+    {
+      "session_id": "synthetic-14-1-1",
+      "ground_truth": 1,
+      "base_score": 0.9881040607955325,
+      "calibrated_score": 0.999998053305527,
+      "scenario": "payment_downgrade"
+    },
+    {
+      "session_id": "synthetic-14-2-0",
+      "ground_truth": 0,
+      "base_score": 0.4766982151448138,
+      "calibrated_score": 0.48623069788650186,
+      "scenario": "opaque_sso"
+    },
+    {
+      "session_id": "synthetic-14-2-1",
+      "ground_truth": 1,
+      "base_score": 0.4766982151448138,
+      "calibrated_score": 0.48623069788650186,
+      "scenario": "opaque_sso"
+    },
+    {
+      "session_id": "synthetic-14-3-0",
+      "ground_truth": 0,
+      "base_score": 0.48601837609896026,
+      "calibrated_score": 0.5135330893892602,
+      "scenario": "opaque_password_otp"
+    },
+    {
+      "session_id": "synthetic-14-3-1",
+      "ground_truth": 1,
+      "base_score": 0.48601837609896026,
+      "calibrated_score": 0.5135330893892602,
+      "scenario": "opaque_password_otp"
+    },
+    {
+      "session_id": "synthetic-14-4-0",
+      "ground_truth": 0,
+      "base_score": 0.043540149219507586,
+      "calibrated_score": 0.00014741813059713992,
+      "scenario": "informational_password"
+    },
+    {
+      "session_id": "synthetic-14-4-1",
+      "ground_truth": 1,
+      "base_score": 0.9823871080989718,
+      "calibrated_score": 0.9999937576723822,
+      "scenario": "informational_password"
+    },
+    {
+      "session_id": "synthetic-14-5-0",
+      "ground_truth": 0,
+      "base_score": 0.03540091022631467,
+      "calibrated_score": 7.84947975143094e-05,
+      "scenario": "download_otp"
+    },
+    {
+      "session_id": "synthetic-14-5-1",
+      "ground_truth": 1,
+      "base_score": 0.9782453845726974,
+      "calibrated_score": 0.9999882757751218,
+      "scenario": "download_otp"
+    },
+    {
+      "session_id": "synthetic-15-0-0",
+      "ground_truth": 0,
+      "base_score": 0.04196013865602007,
+      "calibrated_score": 0.00013167091945357696,
+      "scenario": "target_swap"
+    },
+    {
+      "session_id": "synthetic-15-0-1",
+      "ground_truth": 1,
+      "base_score": 0.993095752716795,
+      "calibrated_score": 0.9999996095708851,
+      "scenario": "target_swap"
+    },
+    {
+      "session_id": "synthetic-15-1-0",
+      "ground_truth": 0,
+      "base_score": 0.03387662625577733,
+      "calibrated_score": 6.869277485698916e-05,
+      "scenario": "payment_downgrade"
+    },
+    {
+      "session_id": "synthetic-15-1-1",
+      "ground_truth": 1,
+      "base_score": 0.9876415153546699,
+      "calibrated_score": 0.9999978204563758,
+      "scenario": "payment_downgrade"
+    },
+    {
+      "session_id": "synthetic-15-2-0",
+      "ground_truth": 0,
+      "base_score": 0.4670755433101423,
+      "calibrated_score": 0.45808011442431906,
+      "scenario": "opaque_sso"
+    },
+    {
+      "session_id": "synthetic-15-2-1",
+      "ground_truth": 1,
+      "base_score": 0.4670755433101423,
+      "calibrated_score": 0.45808011442431906,
+      "scenario": "opaque_sso"
+    },
+    {
+      "session_id": "synthetic-15-3-0",
+      "ground_truth": 0,
+      "base_score": 0.46675685930917343,
+      "calibrated_score": 0.4571502874463236,
+      "scenario": "opaque_password_otp"
+    },
+    {
+      "session_id": "synthetic-15-3-1",
+      "ground_truth": 1,
+      "base_score": 0.46675685930917343,
+      "calibrated_score": 0.4571502874463236,
+      "scenario": "opaque_password_otp"
+    },
+    {
+      "session_id": "synthetic-15-4-0",
+      "ground_truth": 0,
+      "base_score": 0.04196013865602007,
+      "calibrated_score": 0.00013167091945357696,
+      "scenario": "informational_password"
+    },
+    {
+      "session_id": "synthetic-15-4-1",
+      "ground_truth": 1,
+      "base_score": 0.9817063879306243,
+      "calibrated_score": 0.9999930110150523,
+      "scenario": "informational_password"
+    },
+    {
+      "session_id": "synthetic-15-5-0",
+      "ground_truth": 0,
+      "base_score": 0.034105729070513596,
+      "calibrated_score": 7.010946356883843e-05,
+      "scenario": "download_otp"
+    },
+    {
+      "session_id": "synthetic-15-5-1",
+      "ground_truth": 1,
+      "base_score": 0.9774082722169363,
+      "calibrated_score": 0.9999868734256699,
+      "scenario": "download_otp"
+    }
+  ],
+  "test_by_service_category": {
+    "authentication": {
+      "sample_count": 40,
+      "threshold": 0.5,
+      "accuracy": 0.8,
+      "precision": 0.875,
+      "recall": 0.7,
+      "f1": 0.7777777777777778,
+      "average_precision": 0.9139285714285713,
+      "pr_auc_trapezoidal": 0.9282142857142858,
+      "roc_auc": 0.92,
+      "fpr": 0.1,
+      "fnr": 0.3,
+      "fpr_wilson_95": [
+        0.027866481213768224,
+        0.3010336452284873
+      ],
+      "fnr_wilson_95": [
+        0.1454772448676043,
+        0.5189728183535235
+      ],
+      "interval_limitation": "Binomial reference assumes independent trials; dependent authored fixtures do not establish population error bounds.",
+      "confusion_matrix": {
+        "tn": 18,
+        "fp": 2,
+        "fn": 6,
+        "tp": 14
+      },
+      "brier_score": 0.10039661576683682,
+      "log_loss": 0.27809200119577965,
+      "expected_calibration_error_5_bins": 0.008537861266362324,
+      "calibration_bins": [
+        {
+          "lower": 0.0,
+          "upper": 0.2,
+          "count": 12,
+          "mean_score": 0.00011779706019743026,
+          "observed_fraction": 0.0
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.4,
+          "count": 0,
+          "mean_score": null,
+          "observed_fraction": null
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.6000000000000001,
+          "count": 16,
+          "mean_score": 0.4787485472866012,
+          "observed_fraction": 0.5
+        },
+        {
+          "lower": 0.6000000000000001,
+          "upper": 0.8,
+          "count": 0,
+          "mean_score": null,
+          "observed_fraction": null
+        },
+        {
+          "lower": 0.8,
+          "upper": 1.0,
+          "count": 12,
+          "mean_score": 0.9999935297901881,
+          "observed_fraction": 1.0
+        }
+      ]
+    },
+    "payment": {
+      "sample_count": 8,
+      "threshold": 0.5,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "average_precision": 1.0,
+      "pr_auc_trapezoidal": 1.0,
+      "roc_auc": 1.0,
+      "fpr": 0.0,
+      "fnr": 0.0,
+      "fpr_wilson_95": [
+        0.0,
+        0.4898908364545973
+      ],
+      "fnr_wilson_95": [
+        0.0,
+        0.4898908364545973
+      ],
+      "interval_limitation": "Binomial reference assumes independent trials; dependent authored fixtures do not establish population error bounds.",
+      "confusion_matrix": {
+        "tn": 4,
+        "fp": 0,
+        "fn": 0,
+        "tp": 4
+      },
+      "brier_score": 2.660545639076643e-09,
+      "log_loss": 3.7433253819485475e-05,
+      "expected_calibration_error_5_bins": 3.743192348174462e-05,
+      "calibration_bins": [
+        {
+          "lower": 0.0,
+          "upper": 0.2,
+          "count": 4,
+          "mean_score": 7.280072791488834e-05,
+          "observed_fraction": 0.0
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.4,
+          "count": 0,
+          "mean_score": null,
+          "observed_fraction": null
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.6000000000000001,
+          "count": 0,
+          "mean_score": null,
+          "observed_fraction": null
+        },
+        {
+          "lower": 0.6000000000000001,
+          "upper": 0.8,
+          "count": 0,
+          "mean_score": null,
+          "observed_fraction": null
+        },
+        {
+          "lower": 0.8,
+          "upper": 1.0,
+          "count": 4,
+          "mean_score": 0.9999979368809514,
+          "observed_fraction": 1.0
+        }
+      ]
+    }
+  },
+  "release_gate": {
+    "status": "BLOCKED",
+    "deploy": false,
+    "autonomous_blocking": false,
+    "reasons": [
+      "Independent external evaluation and prevention operating-point approval have not been completed.",
+      "SYNTHETIC authored samples cannot establish real-world generalization or calibration.",
+      "Independent domain_group generalization is UNVERIFIED.",
+      "Independent brand_group generalization is UNVERIFIED.",
+      "Independent template_group generalization is UNVERIFIED.",
+      "Independent temporal generalization is UNVERIFIED."
+    ]
+  }
+}

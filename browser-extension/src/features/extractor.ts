@@ -83,9 +83,9 @@ export function extractFeatureVector(evidence: EvidenceCollection): FeatureVecto
   const hasEmailField = forms.some((f) => f.detectedDataTypes?.includes("EMAIL")) || inputs.some((i) => i.detectedDataTypes?.includes("EMAIL"));
   const hasUsernameField = forms.some((f) => f.detectedDataTypes?.includes("USERNAME")) || inputs.some((i) => i.detectedDataTypes?.includes("USERNAME"));
   const hasPhoneField = forms.some((f) => f.detectedDataTypes?.includes("PHONE")) || inputs.some((i) => i.detectedDataTypes?.includes("PHONE"));
-  const hasCardField = forms.some((f) => f.detectedDataTypes?.includes("PAYMENT_CARD")) || inputs.some((i) => i.detectedDataTypes?.includes("PAYMENT_CARD"));
+  const hasCardField = forms.some((f) => f.detectedDataTypes?.includes("CARD")) || inputs.some((i) => i.detectedDataTypes?.includes("CARD"));
   const hasCvvField = forms.some((f) => f.detectedDataTypes?.includes("CVV")) || inputs.some((i) => i.detectedDataTypes?.includes("CVV"));
-  const hasIdentityField = forms.some((f) => f.detectedDataTypes?.includes("IDENTITY_DOCUMENT")) || inputs.some((i) => i.detectedDataTypes?.includes("IDENTITY_DOCUMENT"));
+  const hasIdentityField = forms.some((f) => f.detectedDataTypes?.includes("ID")) || inputs.some((i) => i.detectedDataTypes?.includes("ID"));
   const hasBankField = forms.some((f) => f.detectedDataTypes?.includes("BANK_ACCOUNT")) || inputs.some((i) => i.detectedDataTypes?.includes("BANK_ACCOUNT"));
   const hasFileUpload = forms.some((f) => f.detectedDataTypes?.includes("FILE_UPLOAD")) || inputs.some((i) => i.detectedDataTypes?.includes("FILE_UPLOAD"));
 
@@ -107,7 +107,7 @@ export function extractFeatureVector(evidence: EvidenceCollection): FeatureVecto
     has_bank_field: hasBankField,
     has_file_upload: hasFileUpload,
 
-    // Rich feature set matching feature_spec.json
+    // Origin-only prototype features; path/query features are unavailable, not research-model parity.
     url_length: urlStr.length,
     hostname_length: hostname.length,
     path_length: pathClean.length,

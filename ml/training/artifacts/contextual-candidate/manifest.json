@@ -1,0 +1,50 @@
+{
+  "protocol": "contextual-training-1",
+  "dataset_sha256": "6307726db7b5933721cab2334d0395e1cc03f6dea1684cea4e4038475bc7e2f6",
+  "report_sha256": "490fffe28aa3039fe86b1edaea25522430a0a352189a778c2e4b8e47b0367753",
+  "selected_model": "LogisticRegression",
+  "source_hashes": {
+    "ml/training/train_models.py": "27f0dedf21a6d9e9707920106b43157a711055556d4c414a7ecd12284f5af36c",
+    "ml/evaluation/contextual_eval.py": "f7e511e1ce847372b80e171f7df9dbb18daf20ca8394b72e5c41509647d2c3d7",
+    "ml/data/build_context_dataset.py": "4c55b1040af625bd3506219385fedf6503e7cee42381f72b61e94d5a8ac8669b",
+    "browser-extension/src/core/tsfeg.ts": "378447828cdef915d87e494d3b6e66840f049c94201fc244024dde3ef52616db"
+  },
+  "artifacts": {
+    "logistic_json": {
+      "path": "C:\\Users\\anant\\OneDrive\\Desktop\\Capstone-1-GitHub-Ready\\ml\\training\\artifacts\\contextual-candidate\\contextual-lr-candidate.json",
+      "sha256": "d1571132e8d156bf3a3835de3c95878123729f63afbc052d38488e62d99d472c",
+      "selected": true
+    },
+    "selected_onnx": {
+      "path": "C:\\Users\\anant\\OneDrive\\Desktop\\Capstone-1-GitHub-Ready\\ml\\training\\artifacts\\contextual-candidate\\contextual-selected-candidate.onnx",
+      "sha256": "f92881d77f8326d7d7181580d2891695888a2e45e152d752a781fa8575a3425f",
+      "selected_model": "LogisticRegression",
+      "feature_count": 27,
+      "output_names": [
+        "label",
+        "probabilities",
+        "calibrated_risk"
+      ],
+      "parity": {
+        "status": "PASS",
+        "vectors": 192,
+        "tolerance": 1e-05,
+        "maximum_base_probability_error": 5.7597600577885544e-08,
+        "maximum_calibrated_probability_error": 1.803041408399153e-07
+      }
+    }
+  },
+  "release_gate": {
+    "status": "BLOCKED",
+    "deploy": false,
+    "autonomous_blocking": false,
+    "reasons": [
+      "Independent external evaluation and prevention operating-point approval have not been completed.",
+      "SYNTHETIC authored samples cannot establish real-world generalization or calibration.",
+      "Independent domain_group generalization is UNVERIFIED.",
+      "Independent brand_group generalization is UNVERIFIED.",
+      "Independent template_group generalization is UNVERIFIED.",
+      "Independent temporal generalization is UNVERIFIED."
+    ]
+  }
+}

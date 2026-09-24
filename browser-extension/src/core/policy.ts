@@ -52,25 +52,25 @@ export function determinePolicyAction(
     case "suspicious":
       return {
         action: "WARN",
-        outcome: "WARNED",
+        outcome: "DECISION_ONLY",
       };
 
     case "malicious":
       if (assessment.confidence > 0.8) {
         return {
           action: "BLOCK",
-          outcome: "BLOCKED_BEFORE_LOAD",
+          outcome: "DECISION_ONLY",
         };
       }
       return {
         action: "CONTAIN",
-        outcome: "CONTAINED_AFTER_LOAD",
+        outcome: "DECISION_ONLY",
       };
 
     default:
       return {
         action: "WARN",
-        outcome: "WARNED",
+        outcome: "DECISION_ONLY",
       };
   }
 }
@@ -95,11 +95,11 @@ export function generatePolicyReason(
     case "ALLOW":
       return `${baseReason} - allowing page to load normally`;
     case "WARN":
-      return `${baseReason} - displaying warning to user`;
+      return `${baseReason} - requesting a warning`;
     case "BLOCK":
-      return `${baseReason} - blocking page due to high-risk indicators`;
+      return `${baseReason} - requesting blocking due to high-risk indicators`;
     case "CONTAIN":
-      return `${baseReason} - containing page with restricted interactions`;
+      return `${baseReason} - requesting containment`;
     case "CONFIRM":
       return `${baseReason} - requiring confirmation before submission`;
     default:

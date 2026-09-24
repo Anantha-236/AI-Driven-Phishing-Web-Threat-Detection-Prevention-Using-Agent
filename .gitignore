@@ -30,6 +30,7 @@ __pycache__/
 _archive/
 
 # Local runtime / logs
+.runtime/
 *.log
 *.tmp
 *.temp
@@ -47,3 +48,4 @@ desktop.ini
 
 # OneDrive / conflict noise
 *-conflict-*
+test-results.txt

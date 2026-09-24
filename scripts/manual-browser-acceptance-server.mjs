@@ -67,7 +67,7 @@ const suspiciousHtml = pageTemplate(
   "Suspicious Scenario",
   `<h1>Suspicious Scenario</h1>
   <p>Expected policy outcome: WARNED (cross-domain credential request).</p>
-  <form action="https://cross-destination.untrusted-auth.net/login" method="post">
+  <form action="http://localhost:${port}/sink" method="post">
     <label>Email <input type="email" name="email" autocomplete="email" /></label><br /><br />
     <label>Password <input type="password" name="password" autocomplete="current-password" /></label><br /><br />
     <label>OTP <input type="text" name="otp" autocomplete="one-time-code" /></label><br /><br />
@@ -103,22 +103,22 @@ const dynamicHtml = pageTemplate(
       form.action = "https://dynamic-start.example/login";
       form.method = "post";
 
-      const user = document.createElement("input");
-      user.type = "text";
-      user.name = "username";
-      user.autocomplete = "username";
+      const email = document.createElement("input");
+      email.type = "email";
+      email.name = "email";
+      email.autocomplete = "email";
 
       const pass = document.createElement("input");
       pass.type = "password";
       pass.name = "password";
       pass.autocomplete = "current-password";
 
-      form.appendChild(user);
+      form.appendChild(email);
       form.appendChild(document.createElement("br"));
       form.appendChild(pass);
       host.appendChild(form);
       host.appendChild(document.createElement("hr"));
-      host.appendChild(document.createTextNode("Step 1 complete: dynamic form + password."));
+      host.appendChild(document.createTextNode("Step 1 complete: dynamic form + email + password."));
     }, 700);
 
     setTimeout(() => {
@@ -138,7 +138,7 @@ const dynamicHtml = pageTemplate(
     setTimeout(() => {
       const form = document.getElementById("dynamic-login");
       if (form) {
-        form.action = "https://dynamic-changed.example/collect";
+        form.action = "http://localhost:${port}/sink";
       }
       host.appendChild(document.createElement("hr"));
       host.appendChild(document.createTextNode("Step 3 complete: form action changed."));
@@ -176,8 +176,60 @@ const privacyHtml = pageTemplate(
   </script>`
 );
 
+// Authored controlled cases: labels express simulated intent, never real-world adjudication.
+function researchPage(family, label, layout) {
+  const cross = `http://localhost:${port}/sink`;
+  return pageTemplate('Controlled event research', `
+    <main data-layout="${layout}"><form id="auth" action="/sink" method="post"><input type="password" autocomplete="current-password"><button>Submit</button></form>
+    <form id="other" action="${cross}" method="post"><input type="text"></form></main>`, '', `<script>
+    window.runScenario = async () => {
+      const auth = document.getElementById('auth'), other = document.getElementById('other');
+      const interact = () => auth.querySelector('input').dispatchEvent(new Event('input', { bubbles: true }));
+      const tick = () => new Promise(r => setTimeout(r, 50));
+      if (${family} === 1) { // Sensitive versus unrelated form gets the external target.
+        if (${label}) { auth.action = '${cross}'; other.action = '/sink'; }
+        await tick(); interact();
+      } else if (${family} === 2) { // Destination change after versus before interaction.
+        if (${label}) { interact(); await tick(); auth.action = '${cross}'; }
+        else { auth.action = '${cross}'; await tick(); interact(); }
+      } else if (${family} === 3) { // Dynamically inserted credential category bound to different form.
+        const otp = document.createElement('input'); otp.autocomplete = 'one-time-code';
+        (${label} ? auth : other).append(otp); interact(); await tick();
+        if (${label}) auth.action = '${cross}';
+      } else if (${family} === 4) { // Same-origin versus cross-origin request after interaction.
+        interact(); await tick(); await fetch(${label} ? '${cross}' : '/sink', { mode: 'no-cors', method: 'POST' });
+      } else if (${family} === 5) { // Password/OTP escalation with versus without late destination change.
+        interact(); await tick(); const otp = document.createElement('input'); otp.autocomplete = 'one-time-code'; auth.append(otp);
+        await tick(); otp.dispatchEvent(new Event('input', { bubbles: true }));
+        if (${label}) { await tick(); auth.action = '${cross}'; }
+      } else { // Observational ambiguity: delegated auth versus simulated abuse have identical metadata.
+        auth.action = '${cross}'; await tick(); interact();
+      }
+      await tick();
+    };
+    </script>`);
+}
+
+let blockedProbeReceipts = 0;
 const server = http.createServer((req, res) => {
-  const url = req.url || "/";
+  const parsed = new URL(req.url || '/', `http://127.0.0.1:${port}`);
+  const url = parsed.pathname;
+  if (url === '/blocked') blockedProbeReceipts++;
+  if (url === '/test-receiver-count') { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ blocked_probe_receipts: blockedProbeReceipts })); return; }
+  if (url === '/sink' || url === '/login' || url === '/noop') { res.end('controlled sink'); return; }
+  if (url === '/banking') { res.writeHead(302, { Location: '/benign' }); res.end(); return; }
+  if (url === '/embedded') { res.setHeader('content-type', 'text/html'); res.end(pageTemplate('Controlled embedded authentication', `<iframe src="http://localhost:${port}/benign"></iframe>`)); return; }
+  if (['/oauth', '/sso', '/federated', '/cross-origin'].includes(url)) {
+    res.setHeader('content-type', 'text/html'); res.end(researchPage(6, 0, 0)); return;
+  }
+  if (url === '/payment') { res.setHeader('content-type', 'text/html'); res.end(pageTemplate('Controlled payment metadata', `<form action="http://localhost:${port}/sink"><input autocomplete="cc-number"><input autocomplete="cc-csc"><button>Pay</button></form>`)); return; }
+  if (url === '/research') {
+    const family = Number(parsed.searchParams.get('family'));
+    const label = Number(parsed.searchParams.get('label'));
+    const layout = Number(parsed.searchParams.get('layout'));
+    if (![1,2,3,4,5,6].includes(family) || ![0,1].includes(label) || ![0,1].includes(layout)) { res.writeHead(400); res.end(); return; }
+    res.setHeader('content-type', 'text/html'); res.end(researchPage(family, label, layout)); return;
+  }
   const map = {
     "/": indexHtml,
     "/benign": benignHtml,

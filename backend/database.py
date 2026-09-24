@@ -7,12 +7,16 @@ Strict privacy protection: no passwords, tokens, or secret values are stored.
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import psycopg
+from dotenv import load_dotenv
 from psycopg.rows import dict_row
+
+load_dotenv()
 
 DB_FILE_PATH = Path(__file__).resolve().parent / "capstone.db"
 SCHEMA_FILE_PATH = Path(__file__).resolve().parent / "schema.sql"
@@ -58,6 +62,14 @@ class Database:
                             ("model-onnx-v1.1", "1.1.0", "ONNX / LogisticRegression", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", True),
                         )
 
+                    event_model = Path(__file__).resolve().parents[1] / 'browser-extension/assets/event-model.json'
+                    if event_model.exists():
+                        cursor.execute("UPDATE model_versions SET is_active = false WHERE model_id <> %s", ('controlled-event-lr-1',))
+                        cursor.execute("INSERT INTO model_versions (model_id, version, model_type, sha256_hash, is_active) "
+                                       "VALUES (%s, %s, %s, %s, true) ON CONFLICT (model_id) DO UPDATE SET "
+                                       "sha256_hash=EXCLUDED.sha256_hash, model_type=EXCLUDED.model_type, is_active=true",
+                                       ('controlled-event-lr-1', 'event-features-1', 'LogisticRegression CONTROLLED uncalibrated', hashlib.sha256(event_model.read_bytes()).hexdigest()))
+
                     cursor.execute("SELECT COUNT(*) FROM policy_versions")
                     if cursor.fetchone()[0] == 0:
                         cursor.execute(
@@ -85,7 +97,7 @@ class Database:
                 conn.commit()
                 self._is_connected = True
         except Exception as e:
-            print(f"[CAPSTONE-1 DB Warning] DB init error: {e}")
+            print(f"[CAPSTONE-1 DB Warning] DB init error: {type(e).__name__}")
             self._is_connected = False
 
     def is_healthy(self) -> bool:
@@ -108,7 +120,7 @@ class Database:
                     row = cursor.fetchone()
                     return dict(row) if row else None
         except Exception as e:
-            print(f"[CAPSTONE-1 DB] Error fetching active model: {e}")
+            print(f"[CAPSTONE-1 DB] Error fetching active model: {type(e).__name__}")
             return None
 
     def get_service_profile(self, service_id: str) -> Optional[Dict[str, Any]]:
@@ -136,13 +148,31 @@ class Database:
                             pass
                     return profile
         except Exception as e:
-            print(f"[CAPSTONE-1 DB] Error fetching service profile: {e}")
+            print(f"[CAPSTONE-1 DB] Error fetching service profile: {type(e).__name__}")
             return None
+
+    def list_observations(self, limit: int = 20) -> List[Dict[str, Any]]:
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        "SELECT observation_id, collection_id, device_id, device_platform, page_domain, page_url_sanitized, is_https, "
+                        "form_count, input_count, script_count, requested_data_types, privacy_policy_url, terms_url, threat_level, model_score, policy_action, observed_at "
+                        "FROM observations ORDER BY observed_at DESC LIMIT %s",
+                        (limit,),
+                    )
+                    rows = cursor.fetchall()
+                    return [dict(row) for row in rows]
+        except Exception as e:
+            print(f"[CAPSTONE-1 DB] Error listing observations: {type(e).__name__}")
+            return []
 
     def store_observation(
         self,
         observation_id: str,
         collection_id: str,
+        device_id: str,
+        device_platform: str,
         page_domain: str,
         page_url_sanitized: str,
         is_https: bool,
@@ -150,6 +180,8 @@ class Database:
         input_count: int,
         script_count: int,
         requested_data_types: List[str],
+        privacy_policy_url: str = "",
+        terms_url: str = "",
         threat_level: Optional[str] = None,
         model_score: Optional[float] = None,
         policy_action: Optional[str] = None,
@@ -159,12 +191,14 @@ class Database:
                 with conn.cursor() as cursor:
                     cursor.execute(
                         "INSERT INTO observations ("
-                        "  observation_id, collection_id, page_domain, page_url_sanitized, is_https, "
-                        "  form_count, input_count, script_count, requested_data_types, threat_level, model_score, policy_action"
-                        ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        "  observation_id, collection_id, device_id, device_platform, page_domain, page_url_sanitized, is_https, "
+                        "  form_count, input_count, script_count, requested_data_types, privacy_policy_url, terms_url, threat_level, model_score, policy_action"
+                        ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                         (
                             observation_id,
                             collection_id,
+                            device_id,
+                            device_platform,
                             page_domain,
                             page_url_sanitized,
                             is_https,
@@ -172,6 +206,8 @@ class Database:
                             input_count,
                             script_count,
                             json.dumps(requested_data_types),
+                            privacy_policy_url,
+                            terms_url,
                             threat_level,
                             model_score,
                             policy_action,
@@ -180,7 +216,7 @@ class Database:
                 conn.commit()
                 return True
         except Exception as e:
-            print(f"[CAPSTONE-1 DB] Error storing observation: {e}")
+            print(f"[CAPSTONE-1 DB] Error storing observation: {type(e).__name__}")
             return False
 
 

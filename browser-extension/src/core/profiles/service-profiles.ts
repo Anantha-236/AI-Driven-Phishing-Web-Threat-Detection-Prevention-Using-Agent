@@ -102,3 +102,42 @@ export function findProfileByDomain(domain: string): ServiceProfile | null {
 export function findProfileById(serviceId: string): ServiceProfile | null {
   return DECLARED_SERVICE_PROFILES[serviceId.toLowerCase()] || null;
 }
+
+// Independent of the historical/example profiles above. Exact host matches only;
+// an origin match establishes a registry association, never page safety or delegation.
+export const LOGIN_ORIGINS = [
+  { service: 'google', origin: 'https://accounts.google.com', source: 'https://accounts.google.com/', checked: '2026-09-10' },
+  { service: 'paypal', origin: 'https://www.paypal.com', source: 'https://www.paypal.com/signin', checked: '2026-09-10' },
+  { service: 'microsoft', origin: 'https://login.microsoftonline.com', source: 'https://login.microsoftonline.com/', checked: '2026-09-10' },
+] as const;
+export interface OriginIdentity {
+  status: 'KNOWN_LOGIN_ORIGIN' | 'POSSIBLE_IMPERSONATION' | 'UNKNOWN';
+  service: 'google' | 'paypal' | 'microsoft' | null;
+}
+export function identifyOrigin(origin: string | null): OriginIdentity {
+  const unknown: OriginIdentity = { status: 'UNKNOWN', service: null };
+  if (!origin) return unknown;
+  try {
+    const url = new URL(origin);
+    if (!['https:', 'http:'].includes(url.protocol)) return unknown;
+    const known = LOGIN_ORIGINS.find(entry => entry.origin === url.origin);
+    if (known) return { status: 'KNOWN_LOGIN_ORIGIN', service: known.service };
+    const host = url.hostname.toLowerCase();
+    // A brand word embedded in another hostname is a clue, not proof of impersonation.
+    // Exclude the corresponding real parent domain without extending trusted login scope.
+    for (const service of ['google', 'paypal', 'microsoft'] as const) {
+      const parents = service === 'microsoft' ? ['microsoft.com', 'microsoftonline.com'] : [`${service}.com`];
+      if (parents.some(parent => host === parent || host.endsWith(`.${parent}`))) return unknown;
+      if (host.split(/[.-]/).some(label => label.includes(service))) return { status: 'POSSIBLE_IMPERSONATION', service };
+    }
+    return unknown;
+  } catch { return unknown; }
+}
+
+export function destinationStatus(pageOrigin: string | null, target: string | null) {
+  if (!target) return 'UNKNOWN' as const;
+  if (pageOrigin?.startsWith('https:') && target.startsWith('http:')) return 'HTTPS_DOWNGRADE' as const;
+  if (target === pageOrigin) return 'SAME_ORIGIN' as const;
+  if (identifyOrigin(target).status === 'KNOWN_LOGIN_ORIGIN') return 'KNOWN_LOGIN_ORIGIN' as const;
+  return 'UNVERIFIED_CROSS_ORIGIN' as const;
+}

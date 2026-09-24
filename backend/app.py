@@ -1,7 +1,6 @@
 """
-CAPSTONE-1 Backend REST Service (Pure Python Standard Library)
-Zero C-extension dependency - resilient against OS binary restrictions.
-Provides endpoints for health checks, model metadata, service registry, and observation telemetry ingestion.
+CAPSTONE-1 compatibility HTTP entry point.
+Uses the canonical Pydantic observation contract and PostgreSQL access layer.
 """
 
 from __future__ import annotations
@@ -16,35 +15,14 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 from backend.database import db_instance
+from backend.models import ObservationRequest, ServiceProfileResponse
 
 
-def validate_privacy_safety(payload: Dict[str, Any]) -> None:
-    """
-    Strict privacy validation gate:
-    Rejects any payload containing raw secrets, password values, tokens, or form values.
-    """
-    forbidden_keys = {
-        "value",
-        "password_value",
-        "raw_value",
-        "secret",
-        "cvv_value",
-        "otp_value",
-        "pin_value",
-        "card_value",
-    }
-
-    def _check(obj: Any) -> None:
-        if isinstance(obj, dict):
-            for k, v in obj.items():
-                if k.lower() in forbidden_keys:
-                    raise ValueError(f"Privacy violation: payload contains forbidden secret field '{k}'")
-                _check(v)
-        elif isinstance(obj, list):
-            for item in obj:
-                _check(item)
-
-    _check(payload)
+def validate_privacy_safety(payload: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        return ObservationRequest.model_validate(payload).model_dump()
+    except Exception:
+        raise ValueError("Invalid sanitized payload") from None
 
 
 def handle_request(method: str, path: str, body: Optional[bytes] = None) -> Tuple[int, Dict[str, Any]]:
@@ -86,7 +64,7 @@ def handle_request(method: str, path: str, body: Optional[bytes] = None) -> Tupl
         profile = db_instance.get_service_profile(service_id)
         if not profile:
             return HTTPStatus.NOT_FOUND, {"detail": f"Service profile '{service_id}' not found in registry"}
-        return HTTPStatus.OK, profile
+        return HTTPStatus.OK, ServiceProfileResponse.model_validate(profile).model_dump()
 
     # 4. Ingest Observations
     if method == "POST" and clean_path == "/api/v1/observations":
@@ -99,7 +77,7 @@ def handle_request(method: str, path: str, body: Optional[bytes] = None) -> Tupl
 
         # Validate privacy safety
         try:
-            validate_privacy_safety(payload)
+            payload = validate_privacy_safety(payload)
         except ValueError as err:
             return HTTPStatus.UNPROCESSABLE_ENTITY, {"detail": str(err)}
 
@@ -136,6 +114,8 @@ def handle_request(method: str, path: str, body: Optional[bytes] = None) -> Tupl
         stored = db_instance.store_observation(
             observation_id=obs_id,
             collection_id=collection_id,
+            device_id=payload["deviceId"] or "device-unknown",
+            device_platform=payload["devicePlatform"],
             page_domain=str(page_data.get("domain", "")),
             page_url_sanitized=sanitized_url,
             is_https=bool(page_data.get("isHTTPS", False)),
@@ -143,10 +123,15 @@ def handle_request(method: str, path: str, body: Optional[bytes] = None) -> Tupl
             input_count=len(inputs),
             script_count=len(scripts),
             requested_data_types=requested_types,
+            privacy_policy_url=page_data.get("privacyPolicyUrl") or "",
+            terms_url=page_data.get("termsUrl") or "",
             threat_level=payload.get("threatLevel"),
             model_score=payload.get("modelScore"),
             policy_action=payload.get("policyAction"),
         )
+
+        if not stored:
+            return HTTPStatus.SERVICE_UNAVAILABLE, {"detail": "Observation storage unavailable"}
 
         return HTTPStatus.CREATED, {
             "status": "ACCEPTED",

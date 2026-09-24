@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS policy_versions (
 CREATE TABLE IF NOT EXISTS observations (
     observation_id VARCHAR(64) PRIMARY KEY,
     collection_id VARCHAR(64) NOT NULL,
+    device_id VARCHAR(128) NOT NULL DEFAULT 'device-unknown',
+    device_platform VARCHAR(128) DEFAULT '',
     page_domain VARCHAR(255) NOT NULL,
     page_url_sanitized VARCHAR(1024) NOT NULL,
     is_https BOOLEAN NOT NULL,
@@ -45,6 +47,8 @@ CREATE TABLE IF NOT EXISTS observations (
     input_count INTEGER NOT NULL DEFAULT 0,
     script_count INTEGER NOT NULL DEFAULT 0,
     requested_data_types TEXT,
+    privacy_policy_url TEXT DEFAULT '',
+    terms_url TEXT DEFAULT '',
     threat_level VARCHAR(32),
     model_score REAL,
     policy_action VARCHAR(32),
@@ -54,3 +58,28 @@ CREATE TABLE IF NOT EXISTS observations (
 CREATE INDEX IF NOT EXISTS idx_obs_domain ON observations(page_domain);
 CREATE INDEX IF NOT EXISTS idx_obs_time ON observations(observed_at);
 CREATE INDEX IF NOT EXISTS idx_srv_domain ON service_domains(domain);
+
+-- Versioned, validated M1 metadata; no payload/body/header columns.
+CREATE TABLE IF NOT EXISTS events_sanitized (
+    session_id UUID NOT NULL,
+    tab_id INTEGER NOT NULL,
+    event_seq BIGINT NOT NULL CHECK (event_seq > 0),
+    document_id TEXT,
+    event_type TEXT NOT NULL,
+    event JSONB NOT NULL,
+    received_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (session_id, tab_id, event_seq)
+);
+CREATE INDEX IF NOT EXISTS idx_events_document ON events_sanitized(document_id);
+
+-- Assessment revisions reference the event sequence used, retaining policy requests separately
+-- from observed UI/submission receipts. Strict API models own this bounded JSON structure.
+CREATE TABLE IF NOT EXISTS assessments_sanitized (
+    session_id UUID NOT NULL,
+    tab_id INTEGER NOT NULL,
+    event_seq BIGINT NOT NULL,
+    document_id TEXT,
+    report JSONB NOT NULL,
+    received_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (session_id, tab_id, event_seq)
+);

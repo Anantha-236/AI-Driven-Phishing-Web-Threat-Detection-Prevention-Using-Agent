@@ -24,6 +24,101 @@ import {
 } from "./schema/types";
 import { extractObservedEvents } from "./profiles/observed-behavior";
 import { compareBehavior } from "./profiles/comparator";
+import { buildContextFeatures, buildEventRepresentations, SensitiveEvent, RelationshipEvidence, SensitiveType, PurposeEvidence, EvidenceCompleteness } from './tsfeg';
+import { EventModelArtifact, inferEventModel } from './service-worker-onnx-adapter';
+import { identifyOrigin, destinationStatus, OriginIdentity } from './profiles/service-profiles';
+
+export interface FormDestination {
+  document_id: string | null; frame_id: number; form_id: string;
+  page_origin: string | null; target_origin: string | null;
+  status: ReturnType<typeof destinationStatus>; sensitive_types: SensitiveType[]; event_seq: number;
+}
+
+export interface EventSecurityReport {
+  schema_version: 'event-report-1'; analysis_version: 'event-analysis-1'; policy_version: 'evidence-policy-1';
+  session_id: string; tab_id: number; document_id: string | null; event_seq: number; timestamp_ms: number;
+  destinations: string[]; page_origin: string | null; threatLevel: ThreatLevel; risk: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
+  confidence: 'LOW' | 'MEDIUM'; confidence_kind: 'uncalibrated_evidence_coverage';
+  action: 'ALLOW' | 'WARN' | 'CONFIRM'; outcome: 'DECISION_ONLY' | 'WARNING_DISPLAYED' | 'SUBMIT_EVENT_CANCELLED' | 'USER_CONFIRMED';
+  requestedDataTypes: SensitiveType[]; evidence: RelationshipEvidence[];
+  model_sha256: string | null; model_id: string; model_score: number | null; model_provenance: 'CONTROLLED' | 'SYNTHETIC' | 'REAL' | 'ARCHIVED' | 'MIXED' | 'UNAVAILABLE';
+  model_calibrated: boolean;
+  unknowns: Array<'VALUE_TRANSMISSION_UNKNOWN' | 'SERVER_BEHAVIOR_NOT_OBSERVABLE' | 'IDENTITY_UNKNOWN' | 'MODEL_UNCALIBRATED' | 'COLLECTION_INCOMPLETE' | 'PROGRAMMATIC_SUBMISSION_NOT_COVERED'>;
+  flat_parameters: number[]; relationship_parameters: number[]; analysis_latency_ms: number;
+  context_feature_version: 'context-features-1'; contextual_parameters: number[];
+  purpose: PurposeEvidence; positive_evidence: string[]; contradictions: string[]; evidence_completeness: EvidenceCompleteness;
+  identity: OriginIdentity;
+  form_destinations: FormDestination[];
+  decision_source: 'LOCAL_ML_AGENT' | 'BACKEND_ML_AGENT' | 'LOCAL_FALLBACK';
+  agent_version: 'local-context-agent-1' | 'backend-ml-agent-1' | null;
+  decision_reasons: string[];
+  model_contributions: number[];
+  agent_roundtrip_ms: number | null;
+}
+export function assessEventStream(events: SensitiveEvent[], model: EventModelArtifact | null, incomplete = false): EventSecurityReport | null {
+  if (!events.length) return null;
+  const start = performance.now();
+  const features = buildEventRepresentations(events);
+  const contextual = buildContextFeatures(events, incomplete);
+  const latest = events[events.length - 1];
+  const top = [...events].reverse().find(e => e.frame_id === 0 && e.frame_origin);
+  const identity = identifyOrigin(top?.frame_origin ?? null);
+  const forms = new Map<string, FormDestination>();
+  for (const ev of events) {
+    if (!ev.form_id || !ev.document_id) continue;
+    const key = `${ev.session_id}:${ev.tab_id}:${ev.document_id}:${ev.frame_id}:${ev.form_id}`;
+    const form = forms.get(key) ?? { document_id: ev.document_id, frame_id: ev.frame_id, form_id: ev.form_id,
+      page_origin: ev.frame_origin, target_origin: null, status: 'UNKNOWN', sensitive_types: [], event_seq: ev.event_seq };
+    if (ev.event_type === 'FIELD_DISCOVERED' && ev.sensitive_type && !['UNKNOWN', 'NON_SENSITIVE'].includes(ev.sensitive_type) && !form.sensitive_types.includes(ev.sensitive_type)) form.sensitive_types.push(ev.sensitive_type);
+    if (['FORM_TARGET_OBSERVED', 'FORM_TARGET_CHANGED', 'FORM_SUBMISSION_ATTEMPT'].includes(ev.event_type)) {
+      form.target_origin = ev.target_origin; form.event_seq = ev.event_seq;
+      form.status = destinationStatus(ev.frame_origin, ev.target_origin);
+    }
+    forms.set(key, form);
+  }
+  const form_destinations = [...forms.values()].slice(0, 200);
+  let score: number | null = null;
+  const parameters = model?.representation === 'contextual-flat' ? contextual.vector : model?.representation === 'flat' ? features.flat_vector : features.relationship_vector;
+  try { if (model) score = inferEventModel(model, parameters); } catch { /* Explicit unknown; contextual evidence remains active. */ }
+  const contradictions = [...contextual.contradictions];
+  if (identity.status === 'POSSIBLE_IMPERSONATION' && form_destinations.some(f => f.sensitive_types.length > 0)) contradictions.push('POSSIBLE_IDENTITY_ORIGIN_MISMATCH');
+  const concerning = contradictions.length > 0;
+  // Same-form observations support this gate; nearby analytics, password->OTP and cross-origin alone never do.
+  const corroborated = contradictions.includes('INTERACTED_SENSITIVE_SUBMISSION_REDIRECTED');
+  const hasCoverage = contextual.evidence_completeness.level !== 'LOW';
+  const provenance = score !== null && ['CONTROLLED', 'SYNTHETIC', 'REAL', 'ARCHIVED', 'MIXED'].includes(model!.provenance)
+    ? model!.provenance as EventSecurityReport['model_provenance'] : 'UNAVAILABLE';
+  const decision_reasons = ['LOCAL_CONTEXT_ASSESSMENT', ...contradictions, ...contextual.positive_evidence];
+  if (score === null) decision_reasons.push('MODEL_UNAVAILABLE');
+  else {
+    if (score >= 0.7 && concerning) decision_reasons.push('MODEL_SUPPORTS_CONCERN');
+    else if (score < 0.3 && !concerning) decision_reasons.push('MODEL_SUPPORTS_LOW_RISK');
+    else if (score >= 0.7 && !concerning || score < 0.3 && concerning) decision_reasons.push('MODEL_DISAGREES_WITH_CONTEXT');
+    if (provenance === 'CONTROLLED' || provenance === 'SYNTHETIC' || provenance === 'MIXED') decision_reasons.push('MODEL_ADVISORY_ONLY');
+  }
+  if (!hasCoverage) decision_reasons.push('INSUFFICIENT_CONTEXT');
+  if (incomplete) decision_reasons.push('COLLECTION_INCOMPLETE');
+  const unknowns: EventSecurityReport['unknowns'] = ['VALUE_TRANSMISSION_UNKNOWN', 'SERVER_BEHAVIOR_NOT_OBSERVABLE', 'IDENTITY_UNKNOWN', 'PROGRAMMATIC_SUBMISSION_NOT_COVERED'];
+  if (score === null || !model!.calibrated) unknowns.push('MODEL_UNCALIBRATED');
+  if (incomplete) unknowns.push('COLLECTION_INCOMPLETE');
+  return { schema_version: 'event-report-1', analysis_version: 'event-analysis-1', policy_version: 'evidence-policy-1',
+    session_id: latest.session_id, tab_id: latest.tab_id, document_id: top?.document_id ?? null, event_seq: latest.event_seq, timestamp_ms: Date.now(),
+    destinations: [...new Set(events.flatMap(e => [e.target_origin, e.destination_origin]).filter((o): o is string => !!o))].slice(0, 100),
+    identity, form_destinations, decision_source: 'LOCAL_ML_AGENT', agent_version: 'local-context-agent-1',
+    decision_reasons, model_contributions: score !== null ? parameters.map((value, index) => (value - model!.mean[index]) / model!.scale[index] * model!.coefficients[index]) : [], agent_roundtrip_ms: null,
+    context_feature_version: contextual.version, contextual_parameters: contextual.vector, purpose: contextual.purpose,
+    positive_evidence: contextual.positive_evidence, contradictions, evidence_completeness: contextual.evidence_completeness,
+    page_origin: top?.frame_origin ?? null, threatLevel: corroborated ? 'malicious' : concerning ? 'suspicious' : hasCoverage && !incomplete ? 'benign' : 'insufficient_evidence',
+    risk: corroborated ? 'HIGH' : concerning ? 'MEDIUM' : !hasCoverage || incomplete ? 'UNKNOWN' : 'LOW',
+    confidence: incomplete || contextual.evidence_completeness.level !== 'SUFFICIENT' ? 'LOW' : 'MEDIUM', confidence_kind: 'uncalibrated_evidence_coverage',
+    action: corroborated ? 'CONFIRM' : concerning ? 'WARN' : 'ALLOW', outcome: events.some(e => e.event_type === 'SUBMISSION_PREVENTED') ? 'SUBMIT_EVENT_CANCELLED' : events.some(e => e.event_type === 'SUBMISSION_CONFIRMED') ? 'USER_CONFIRMED' : 'DECISION_ONLY',
+    requestedDataTypes: [...new Set(events.filter(e => e.event_type === 'FIELD_DISCOVERED').map(e => e.sensitive_type).filter((t): t is SensitiveType => !!t && !['UNKNOWN', 'NON_SENSITIVE'].includes(t)))],
+    evidence: features.support, model_id: score !== null ? model!.model_id : 'unavailable', model_score: score,
+    model_sha256: score !== null ? model!.artifact_sha256 ?? null : null,
+    model_provenance: provenance, model_calibrated: score !== null && model!.calibrated === true, unknowns,
+    flat_parameters: features.flat_vector, relationship_parameters: features.relationship_vector,
+    analysis_latency_ms: performance.now() - start };
+}
 
 export interface AssessmentContext {
   modelResult: ModelResult;
@@ -162,7 +257,13 @@ export function generateReasons(context: AssessmentContext): string[] {
 export function assessThreat(context: AssessmentContext): ThreatAssessment {
   const confidence = calculateConfidence(context);
   const reasons = generateReasons(context);
-  const threatLevel = scoreToThreatLevel(context.modelResult.rawScore);
+  // The compatibility model is uncalibrated; fields or its score alone cannot
+  // authorize a threat verdict. Keep snapshots consistent with the event report.
+  const identity = identifyOrigin(context.evidence.page.url);
+  const sensitive = context.features.has_password_field || context.features.has_otp_field || context.features.has_card_field;
+  const downgrade = context.evidence.page.isHTTPS && context.evidence.forms.some(form => form.action.startsWith('http:'));
+  const threatLevel: ThreatLevel = sensitive && (identity.status === 'POSSIBLE_IMPERSONATION' || downgrade)
+    ? 'suspicious' : 'insufficient_evidence';
 
   return {
     threatLevel,

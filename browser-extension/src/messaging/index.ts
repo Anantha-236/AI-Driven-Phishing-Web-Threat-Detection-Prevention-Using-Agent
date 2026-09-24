@@ -6,33 +6,6 @@ import {
   RuntimeMessageType
 } from "../core/schema/types";
 
-function sanitizeValue(value: unknown): unknown {
-  if (typeof value === "string") {
-    let sanitized = value
-      .replace(/([?&](?:user|username|password|otp|token|code|secret)=)[^&#\s]+/gi, "$1[REDACTED]")
-      .replace(/(password|otp|token|secret|code|user|username)\s*[:=]\s*[^,\s;]+/gi, "$1=[REDACTED]")
-      .replace(/(victim_user|SuperSecretPassword123!|998877)/gi, "[REDACTED]");
-
-    if (sanitized !== value) {
-      return sanitized;
-    }
-
-    return value;
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizeValue(item));
-  }
-
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, entryValue]) => [key, sanitizeValue(entryValue)])
-    );
-  }
-
-  return value;
-}
-
 export function createExtensionMessage<T>(
   type: RuntimeMessageType,
   payload: T,
@@ -43,7 +16,7 @@ export function createExtensionMessage<T>(
     type,
     source,
     target,
-    payload: sanitizeValue(payload) as T,
+    payload,
     timestamp: Date.now()
   };
 }
@@ -95,11 +68,5 @@ export function sendEvidenceToServiceWorker(collection: EvidenceCollection): Pro
     return Promise.reject(new Error("Invalid EvidenceCollection payload"));
   }
 
-  const sanitizedCollection = sanitizeValue(collection) as EvidenceCollection;
-  const jsonString = JSON.stringify(sanitizedCollection);
-  if (jsonString.includes("SuperSecretPassword123!") || jsonString.includes("victim_user") || jsonString.includes("998877")) {
-    return Promise.reject(new Error("Secret material detected in message payload"));
-  }
-
-  return sendRuntimeMessage("EVIDENCE_COLLECTED", sanitizedCollection, "content-script", "service-worker");
+  return sendRuntimeMessage("EVIDENCE_COLLECTED", collection, "content-script", "service-worker");
 }

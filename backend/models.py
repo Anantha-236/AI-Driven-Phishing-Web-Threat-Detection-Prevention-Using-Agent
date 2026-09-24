@@ -5,48 +5,64 @@ Includes strict privacy validators ensuring untrusted input contains no raw user
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, field_validator
+from typing import Any, Dict, List, Optional, Literal
+from urllib.parse import urlsplit
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, Field, field_validator, model_validator
+from backend.events import SensitiveType, origin_only
+
+
+class BaseModel(PydanticBaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
 
 
 class PageModel(BaseModel):
     id: str
-    url: str
-    domain: str
-    title: Optional[str] = ""
+    url: str = Field(min_length=1, max_length=1024)
+    domain: str = Field(min_length=1, max_length=255)
+    title: Literal[""] = ""
     formIds: Optional[List[str]] = Field(default_factory=list)
     scriptCount: Optional[int] = 0
     isHTTPS: bool = False
+    privacyPolicyUrl: Optional[str] = ""
+    termsUrl: Optional[str] = ""
+
+    _origins = field_validator("url", "privacyPolicyUrl", "termsUrl")(origin_only)
+
+    @model_validator(mode="after")
+    def domain_matches_origin(self):
+        host = urlsplit(self.url).hostname
+        # URL.hostname includes brackets for IPv6 in the browser collector.
+        expected = f"[{host}]" if ":" in host else host
+        if self.domain != expected:
+            raise ValueError("domain must match page origin")
+        return self
 
 
 class FormModel(BaseModel):
     id: str
     action: Optional[str] = ""
     isCrossDomain: bool = False
-    method: str = "GET"
+    method: Literal["GET", "POST"] = "GET"
     inputIds: Optional[List[str]] = Field(default_factory=list)
     hasPasswordField: bool = False
     hasOtpField: bool = False
-    autocompleteAttributes: Optional[List[str]] = Field(default_factory=list)
-    detectedDataTypes: Optional[List[str]] = Field(default_factory=list)
-    target: Optional[str] = ""
+    autocompleteAttributes: List[str] = Field(default_factory=list, max_length=0)
+    detectedDataTypes: Optional[List[SensitiveType]] = Field(default_factory=list)
+    target: Literal[""] = ""
+
+    _origin = field_validator("action")(origin_only)
 
 
 class InputModel(BaseModel):
     id: str
-    inputType: str
-    name: Optional[str] = ""
-    idAttribute: Optional[str] = ""
-    autocomplete: Optional[str] = ""
+    inputType: Literal["password", "email", "tel", "text", "number", "file", "checkbox", "radio", "submit", "select", "textarea"]
+    name: Literal[""] = ""
+    idAttribute: Literal[""] = ""
+    autocomplete: Literal[""] = ""
     isPassword: bool = False
     isOtp: bool = False
-    detectedDataTypes: Optional[List[str]] = Field(default_factory=list)
+    detectedDataTypes: Optional[List[SensitiveType]] = Field(default_factory=list)
     isRequired: Optional[bool] = False
-
-    @field_validator("name", "idAttribute", "autocomplete", mode="before")
-    def sanitize_field(cls, v: Any) -> str:
-        return str(v or "")
-
 
 class ScriptModel(BaseModel):
     id: str
@@ -55,26 +71,35 @@ class ScriptModel(BaseModel):
     isCrossDomain: bool = False
 
 
+    _origin = field_validator("src")(origin_only)
+
+
 class RequestModel(BaseModel):
     id: str
     url: str
-    method: str = "GET"
+    method: Literal["GET", "POST"] = "GET"
     isCrossDomain: bool = False
 
 
+    _origin = field_validator("url")(origin_only)
+
+
 class ObservationRequest(BaseModel):
-    schemaVersion: str = "3.0.0"
-    collectionId: str
-    timestamp: int
+    schemaVersion: Literal["3.0.0"] = "3.0.0"
+    # Collector IDs are coll-<base36 timestamp>-<numeric counter>.
+    collectionId: str = Field(pattern=r"^coll-[a-z0-9]{1,13}-[0-9]{1,16}$", max_length=64)
+    timestamp: int = Field(ge=0)
+    deviceId: str = Field(default="", pattern=r"^(?:|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$")
+    devicePlatform: Literal[""] = ""
     page: PageModel
     forms: List[FormModel] = Field(default_factory=list)
     inputs: List[InputModel] = Field(default_factory=list)
     scripts: List[ScriptModel] = Field(default_factory=list)
     requests: List[RequestModel] = Field(default_factory=list)
-    requestedDataTypes: Optional[List[str]] = Field(default_factory=list)
-    threatLevel: Optional[str] = None
-    modelScore: Optional[float] = None
-    policyAction: Optional[str] = None
+    requestedDataTypes: Optional[List[SensitiveType]] = Field(default_factory=list)
+    threatLevel: Literal["benign", "suspicious", "malicious", "insufficient_evidence"] | None = None
+    modelScore: Optional[float] = Field(default=None, ge=0, le=1, allow_inf_nan=False)
+    policyAction: Literal["ALLOW", "WARN", "CONFIRM", "BLOCK", "CONTAIN"] | None = None
 
     @field_validator("forms", "inputs", mode="before")
     def reject_raw_secrets(cls, v: Any) -> Any:
@@ -88,7 +113,7 @@ class ObservationRequest(BaseModel):
         return v
 
 
-class ObservationResponse(BaseModel):
+class ObservationResponse(PydanticBaseModel):
     status: str = "ACCEPTED"
     observationId: str
     collectionId: str
@@ -97,12 +122,12 @@ class ObservationResponse(BaseModel):
     isStored: bool
 
 
-class ServiceDomainModel(BaseModel):
+class ServiceDomainModel(PydanticBaseModel):
     domain: str
     is_primary: bool = False
 
 
-class ServiceProfileResponse(BaseModel):
+class ServiceProfileResponse(PydanticBaseModel):
     service_id: str
     service_name: str
     category: str
@@ -110,7 +135,7 @@ class ServiceProfileResponse(BaseModel):
     domains: List[ServiceDomainModel] = Field(default_factory=list)
 
 
-class ModelInfoResponse(BaseModel):
+class ModelInfoResponse(PydanticBaseModel):
     model_id: str
     version: str
     model_type: str

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Validates the CAPSTONE-1 project structure against the manifest.
+    Validates the CAPSTONE-1 repository structure, Git state, and security policy.
 .DESCRIPTION
     Detects: unexpected files/directories, forbidden files, secrets in source,
     protected file modifications, large untracked files.
@@ -17,94 +17,147 @@ Write-Output "========================================="
 Write-Output "PROJECT VALIDATION"
 Write-Output "========================================="
 
-# --- 1. Check manifest directories exist ---
-$manifestPath = Join-Path (Join-Path $ProjectRoot ".project") "manifest"
-if (-not (Test-Path $manifestPath)) {
-    Write-Error "CRITICAL: .project/manifest not found"
-    exit 1
-}
+# --- 1. Validate required repository structure ---
+$requiredDirs = @(
+    "backend",
+    "browser-extension",
+    "ml",
+    "docs",
+    "scripts",
+    "tests"
+)
 
-$expectedDirs = @()
-$expectedFiles = @()
-Get-Content $manifestPath | ForEach-Object {
-    $line = $_.Trim()
-    if ($line -and -not $line.StartsWith("#")) {
-        if ($line -match "^dir\s+(.+)$") {
-            $expectedDirs += $Matches[1].Trim()
-        } elseif ($line -match "^file\s+(.+)$") {
-            $expectedFiles += $Matches[1].Trim()
-        }
-    }
-}
+$requiredFiles = @(
+    "README.md",
+    "package.json",
+    ".gitignore",
+    ".env.example",
+    "browser-extension/manifest.json",
+    "browser-extension/src/background/service-worker.ts",
+    "browser-extension/src/core/schema/types.ts",
+    "browser-extension/src/core/tab-state.ts",
+    "browser-extension/src/core/tsfeg.ts",
+    "backend/main.py",
+    "backend/models.py",
+    "ml/training/train_models.py"
+)
 
 Write-Output ""
-Write-Output "[1/6] Checking expected directories..."
-foreach ($dir in $expectedDirs) {
+Write-Output "[1/6] Checking required directories..."
+foreach ($dir in $requiredDirs) {
     $fullPath = Join-Path $ProjectRoot $dir
+
     if (-not (Test-Path $fullPath -PathType Container)) {
-        $warnings += "MISSING_DIRECTORY: $dir"
-        Write-Output "  WARN: Missing directory: $dir"
+        $issues += "MISSING_DIRECTORY: $dir"
+        Write-Output "  ERROR: Missing directory: $dir"
     }
 }
 
-Write-Output "[2/6] Checking expected files..."
-foreach ($file in $expectedFiles) {
+Write-Output "[2/6] Checking required files..."
+foreach ($file in $requiredFiles) {
     $fullPath = Join-Path $ProjectRoot $file
+
     if (-not (Test-Path $fullPath -PathType Leaf)) {
-        $warnings += "MISSING_FILE: $file"
-        Write-Output "  WARN: Missing file: $file"
+        $issues += "MISSING_FILE: $file"
+        Write-Output "  ERROR: Missing file: $file"
     }
 }
 
-# --- 2. Detect unexpected files ---
-Write-Output "[3/6] Scanning for unexpected files..."
-$approvedPathsFile = Join-Path (Join-Path $ProjectRoot ".project") "approved-paths"
-$approvedPaths = @()
-if (Test-Path $approvedPathsFile) {
-    Get-Content $approvedPathsFile | ForEach-Object {
-        $line = $_.Trim()
-        if ($line -and -not $line.StartsWith("#")) {
-            $approvedPaths += $line
+# --- 2. Detect unexpected/untracked files ---
+Write-Output "[3/6] Scanning for unexpected/untracked files..."
+
+$skipDirs = @(
+    ".git",
+    "node_modules",
+    "dist",
+    "coverage",
+    ".cache",
+    "__pycache__",
+    ".backups",
+    "venv",
+    ".venv"
+)
+
+# Files eligible for publication: tracked/staged Git files only.
+$trackedRelativePaths = @(
+    & git -c core.quotepath=false -C $ProjectRoot ls-files 2>$null
+)
+
+$trackedItems = @(
+    foreach ($relativePath in $trackedRelativePaths) {
+        if ([string]::IsNullOrWhiteSpace($relativePath)) {
+            continue
+        }
+
+        $fullPath = Join-Path $ProjectRoot $relativePath
+
+        if (Test-Path $fullPath -PathType Leaf) {
+            Get-Item $fullPath
         }
     }
+)
+
+# Local .env is permitted only when Git ignores it and it is not tracked.
+$localEnv = Join-Path $ProjectRoot ".env"
+
+if (Test-Path $localEnv -PathType Leaf) {
+    & git -c core.quotepath=false -C $ProjectRoot check-ignore -q -- ".env"
+
+    if ($LASTEXITCODE -ne 0) {
+        $issues += "LOCAL_ENV_NOT_IGNORED: .env"
+    }
+
+    & git -c core.quotepath=false -C $ProjectRoot ls-files --error-unmatch -- ".env" 2>$null | Out-Null
+
+    if ($LASTEXITCODE -eq 0) {
+        $issues += "LOCAL_ENV_TRACKED: .env"
+    }
 }
 
-$skipDirs = @(".git", "node_modules", "dist", "coverage", ".cache", "__pycache__", ".backups", "venv", ".venv")
-$allItems = Get-ChildItem -Path $ProjectRoot -Recurse -File -ErrorAction SilentlyContinue
+# Git is the source of truth for repository membership.
+$untrackedFiles = @(
+    & git -c core.quotepath=false -C $ProjectRoot ls-files --others --exclude-standard 2>$null
+)
 
-foreach ($item in $allItems) {
-    $relativePath = $item.FullName.Substring($ProjectRoot.Length + 1).Replace("\", "/")
+foreach ($relativePath in $untrackedFiles) {
+    if ([string]::IsNullOrWhiteSpace($relativePath)) {
+        continue
+    }
 
-    # Skip excluded directories
+    $normalizedPath = $relativePath.Replace("\", "/")
+
     $skip = $false
     foreach ($skipDir in $skipDirs) {
-        if ($relativePath.StartsWith("$skipDir/") -or $relativePath -eq $skipDir) {
+        if (
+            $normalizedPath -eq $skipDir -or
+            $normalizedPath.StartsWith("$skipDir/")
+        ) {
             $skip = $true
             break
         }
     }
-    if ($skip) { continue }
 
-    # Check if file is in manifest or approved paths
-    $isExpected = $expectedFiles -contains $relativePath
-    if (-not $isExpected) {
-        foreach ($ap in $approvedPaths) {
-            if ($relativePath.StartsWith($ap)) {
-                $isExpected = $true
-                break
-            }
-        }
-    }
-
-    if (-not $isExpected) {
-        $issues += "UNEXPECTED_FILE: $relativePath"
+    if (-not $skip) {
+        $warnings += "UNTRACKED_FILE: $normalizedPath"
+        Write-Output "  WARN: Untracked file: $normalizedPath"
     }
 }
 
+# Detect tracked files that disappeared from the working tree.
+$missingTrackedFiles = @(
+    & git -c core.quotepath=false -C $ProjectRoot ls-files --deleted 2>$null
+)
+
+foreach ($relativePath in $missingTrackedFiles) {
+    if (-not [string]::IsNullOrWhiteSpace($relativePath)) {
+        $issues += "TRACKED_FILE_MISSING: $relativePath"
+        Write-Output "  ERROR: Tracked file missing: $relativePath"
+    }
+}
 # --- 3. Detect forbidden files ---
 Write-Output "[4/6] Checking for forbidden files..."
 $forbiddenPatterns = @("*.exe", "*.dll", "*.so", "*.dylib", "*.env", "*.pem", "*.key", "*.p12", "*.pfx", "id_rsa", "id_ed25519")
-foreach ($item in $allItems) {
+foreach ($item in $trackedItems) {
     $relativePath = $item.FullName.Substring($ProjectRoot.Length + 1).Replace("\", "/")
     $skip = $false
     foreach ($skipDir in $skipDirs) {
@@ -132,7 +185,7 @@ $secretPatterns = @(
 )
 
 $scanExtensions = @(".ts", ".js", ".json", ".py", ".html", ".css", ".yml", ".yaml", ".toml", ".cfg", ".ini", ".md")
-foreach ($item in $allItems) {
+foreach ($item in $trackedItems) {
     $relativePath = $item.FullName.Substring($ProjectRoot.Length + 1).Replace("\", "/")
     $skip = $false
     foreach ($skipDir in $skipDirs) {
@@ -157,7 +210,7 @@ foreach ($item in $allItems) {
 # --- 5. Large untracked files ---
 Write-Output "[6/6] Checking for large files..."
 $maxSizeBytes = 10 * 1024 * 1024  # 10 MB
-foreach ($item in $allItems) {
+foreach ($item in $trackedItems) {
     $relativePath = $item.FullName.Substring($ProjectRoot.Length + 1).Replace("\", "/")
     $skip = $false
     foreach ($skipDir in $skipDirs) {

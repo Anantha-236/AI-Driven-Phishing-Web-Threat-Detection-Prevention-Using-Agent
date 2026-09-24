@@ -2,6 +2,12 @@ import { SCHEMA_V3_VERSION } from "./version";
 
 // --- Data Type Categories for Privacy-Safe Field Classification ---
 export type DataTypeCategory =
+  | "CARD"
+  | "ID"
+  | "RECOVERY"
+  | "OTHER_SENSITIVE"
+  | "UNKNOWN"
+  | "NON_SENSITIVE"
   | "EMAIL"
   | "USERNAME"
   | "PASSWORD"
@@ -31,6 +37,7 @@ export interface ExtensionContext {
 
 export type RuntimeMessageType =
   | "PING"
+  | "REQUEST_COLLECTION"
   | "EVIDENCE_COLLECTED"
   | "MODEL_RESULT"
   | "POLICY_DECISION"
@@ -55,10 +62,13 @@ export interface PageArtifact extends BaseArtifact {
   type: "page";
   url: string;
   domain: string;
-  title: string;
+  title: "";
   formIds: string[];
   scriptCount: number;
   isHTTPS: boolean;
+  privacyPolicyUrl?: string;
+  termsUrl?: string;
+  policyLinkLabels?: string[];
 }
 
 export interface FormArtifact extends BaseArtifact {
@@ -70,9 +80,9 @@ export interface FormArtifact extends BaseArtifact {
   inputIds: string[];
   hasPasswordField: boolean;
   hasOtpField: boolean;
-  autocompleteAttributes: string[];
+  autocompleteAttributes: [];
   detectedDataTypes?: DataTypeCategory[];
-  target?: string;
+  target?: "";
 }
 
 export interface InputArtifact extends BaseArtifact {
@@ -80,9 +90,9 @@ export interface InputArtifact extends BaseArtifact {
   formId?: string;
   pageId: string;
   inputType: string;
-  name: string;
-  idAttribute: string;
-  autocomplete: string;
+  name: "";
+  idAttribute: "";
+  autocomplete: "";
   isPassword: boolean;
   isOtp: boolean;
   detectedDataTypes?: DataTypeCategory[];
@@ -132,6 +142,8 @@ export interface EvidenceCollection {
   schemaVersion: typeof SCHEMA_V3_VERSION;
   collectionId: string;
   timestamp: number;
+  deviceId?: string;
+  devicePlatform?: string;
   page: PageArtifact;
   forms: FormArtifact[];
   inputs: InputArtifact[];
@@ -156,7 +168,7 @@ export interface FeatureVector {
   has_identity_field?: boolean;
   has_bank_field?: boolean;
   has_file_upload?: boolean;
-  [key: string]: boolean | number | string | undefined;
+  [key: string]: boolean | number | undefined;
 }
 
 // --- Model / Inference Types ---
@@ -181,6 +193,7 @@ export interface ThreatAssessment {
 export type PolicyAction = "ALLOW" | "WARN" | "CONFIRM" | "BLOCK" | "CONTAIN";
 
 export type EnforcementOutcome =
+  | "DECISION_ONLY"
   | "BLOCKED_BEFORE_LOAD"
   | "CONTAINED_AFTER_LOAD"
   | "WARNED"

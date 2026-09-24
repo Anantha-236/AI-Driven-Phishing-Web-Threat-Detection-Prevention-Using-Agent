@@ -1,0 +1,71 @@
+\documentclass[journal]{IEEEtran}
+
+\title{Privacy-Preserving Multi-Signal Browser Threat Assessment: A Research Protocol for Structural Evidence and Destination Context}
+\author{CAPSTONE-1 Research Team}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This manuscript defines a research protocol for evaluating a local-first browser threat-assessment system that classifies sensitive-data requests from structural webpage evidence and may correlate those requests with destination and behavioral context. The current implementation is a prototype. This manuscript deliberately reports no unmeasured performance result; the Results section is reserved for leakage-audited experiments.
+\end{abstract}
+
+\begin{IEEEkeywords}
+phishing detection, browser security, privacy-preserving telemetry, sensitive-data requests, information flow, local inference
+\end{IEEEkeywords}
+
+\section{Introduction}
+Web threats expose a measurement problem: useful detection evidence can be distributed across page structure, requested data categories, identity, behavior, and destinations, while raw values must remain protected. This paper studies that tradeoff as a falsifiable research question rather than assuming that multi-signal detection is universally superior.
+
+\section{Related Work}
+Prior work has explored visual brand identification \cite{lin2021phishpedia}, phishing intention, pre-submit credential leakage \cite{senol2022leakyforms}, and browser information-flow graphs \cite{siby2022webgraph}. The verified literature matrix in \texttt{docs/research/LITERATURE-MATRIX.md} records source status, limitations, privacy implications, and unresolved metadata.
+
+\section{Problem Definition}
+Given browser-observable evidence $E$ and a privacy policy $P$, assess threat risk $R$ without reading raw form values, request bodies, cookies, authorization headers, or tokens. The central question is whether structural sensitive-data evidence and destination context add measurable value under controlled privacy constraints.
+
+\section{Threat Model}
+The threat taxonomy and trust boundaries are defined in \texttt{docs/research/THREAT-MODEL.md}. Universal detection, server-side behavior, and unavailable domain ownership information are out of scope.
+
+\section{Proposed Architecture}
+The proposed pipeline is webpage, browser evidence, structural classification, authoritative features, local inference, risk fusion, policy, explanation, sanitized telemetry, FastAPI, and PostgreSQL. The current repository has demonstrated a controlled browser-to-backend persistence path, but broader coverage remains unverified.
+
+\section{Privacy Model}
+The collector observes structural attributes and metadata only. Privacy claims require source review, negative tests, runtime instrumentation, and inspection of telemetry schemas. A passing controlled test does not prove absence of all possible future leakage.
+
+\section{Browser Evidence Collection}
+Evidence includes page metadata, forms, input attributes, scripts, and relationships that are observable to the extension. Dynamic behavior is evaluated separately from the static protocol.
+
+\section{Sensitive-Data Classification}
+The classifier represents requested categories such as email, username, password, OTP, phone, payment card, CVV, banking, file upload, location, camera, and microphone where supported. Code presence is not treated as browser capability until exercised.
+
+\section{Domain and Network Context}
+Domain and network context are proposed experimental factors. RDAP, DNS, IP, request initiator, and redirect metadata must be evaluated for visibility, cost, freshness, and privacy before inclusion.
+
+\section{Behavior Correlation}
+A candidate relationship graph connects page, sensitive-data request, submission, destination, initiator, and domain context. Whether this improves detection or false-alarm behavior is an open hypothesis.
+
+\section{Local Risk Assessment}
+The system should report component risks and reason codes separately from an overall decision. The current browser artifact is a deterministic prototype model and must not be presented as a research-selected model.
+
+\section{Policy and Prevention}
+A policy decision is distinct from real enforcement. Enforcement claims require a browser experiment showing that the relevant action was actually prevented or contained.
+
+\section{Experimental Methodology}
+Experiments shall use provenance-separated real, controlled, and synthetic data; leakage-safe splits; URL, DOM, data-request, domain, network, and behavior ablations; temporal and unseen-domain tests; adversarial scenarios; privacy tests; and P50/P95 runtime measurements.
+
+\section{Results}
+RESULTS = TO BE FILLED FROM EXPERIMENTAL EVIDENCE. No result is reported in this draft.
+
+\section{Discussion}
+The expected contribution is a testable privacy and correlation protocol. The experiment must determine whether the proposed combination improves useful operating points rather than assuming that additional signals help.
+
+\section{Limitations}
+The current dataset and browser model are prototype-scale. Static controlled scenarios do not establish global detection, and browser visibility does not establish server-side intent or post-exfiltration behavior.
+
+\section{Conclusion}
+This manuscript establishes a research protocol for privacy-preserving browser threat assessment. Publication readiness depends on completed experiments, verified citations, measured limitations, and reproducible artifacts.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
