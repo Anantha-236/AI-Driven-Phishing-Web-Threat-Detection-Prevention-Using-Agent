@@ -1,0 +1,27 @@
+{
+  "schema_version": "stage-b-readiness-policy-1",
+  "min_samples_per_class": {
+    "train": 100,
+    "selection": 50,
+    "calibration": 50,
+    "test": 100
+  },
+  "allowed_provenance": {
+    "train": ["REAL_BROWSER", "ARCHIVED_SANITIZED_EVENTS"],
+    "selection": ["REAL_BROWSER"],
+    "calibration": ["REAL_BROWSER"],
+    "test": ["REAL_BROWSER"]
+  },
+  "require_strict_forward_test": true,
+  "require_group_isolation": [
+    "artifact_group",
+    "domain_group",
+    "brand_group",
+    "source_groups"
+  ],
+  "notes": [
+    "These are project benchmark-gate minima, not a statistical power calculation or claim of research sufficiency.",
+    "Increase min_samples_per_class when the study design or confidence-interval target requires it.",
+    "The final test is restricted to REAL_BROWSER provenance."
+  ]
+}
