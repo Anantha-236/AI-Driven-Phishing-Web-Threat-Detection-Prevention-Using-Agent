@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
-import { copyFileSync, mkdirSync, existsSync } from "fs";
+import { copyFileSync, cpSync, mkdirSync, existsSync } from "fs";
 import { build as esbuild } from "esbuild";
 
 export default defineConfig({
@@ -54,6 +54,17 @@ export default defineConfig({
           const assetsDist = resolve(distDir, "assets");
           if (!existsSync(assetsDist)) mkdirSync(assetsDist, { recursive: true });
           copyFileSync(assetOnnx, resolve(assetsDist, "model.onnx"));
+        }
+
+        // Stage B candidates are installed locally only after Task 11/12 parity
+        // checks. Merely packaging this directory does not activate the candidate.
+        const stageBCandidate = resolve(__dirname, "assets/stage-b-candidate");
+        if (existsSync(stageBCandidate)) {
+          const assetsDist = resolve(distDir, "assets");
+          if (!existsSync(assetsDist)) mkdirSync(assetsDist, { recursive: true });
+          cpSync(stageBCandidate, resolve(assetsDist, "stage-b-candidate"), {
+            recursive: true,
+          });
         }
 
         // Emit a self-contained content script bundle so the real browser-loaded collector is

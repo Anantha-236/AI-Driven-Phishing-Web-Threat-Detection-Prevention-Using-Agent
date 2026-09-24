@@ -70,3 +70,6 @@ Upgrades/**/*.zip
 
 # Installer-created backups
 Upgrades/**/backups/
+
+# Local Stage B browser candidate installed only after parity verification
+browser-extension/assets/stage-b-candidate/
