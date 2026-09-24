@@ -51,3 +51,8 @@ desktop.ini
 test-results.txt
 
 Upgrades/**/backups/
+
+# Local upgrade delivery bundles
+Upgrades/*.zip
+Upgrades/Stage-A-Task-*/
+Upgrades/Stage-A-Agentic-Control-Plane-Planning/
