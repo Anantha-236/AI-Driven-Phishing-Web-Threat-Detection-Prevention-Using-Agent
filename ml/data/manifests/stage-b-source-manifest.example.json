@@ -1,0 +1,43 @@
+{
+  "schema_version": "stage-b-source-manifest-1",
+  "dataset_id": "replace-me-yyyy-mm-dd",
+  "display_name": "Replace with source name",
+  "source": {
+    "provider": "Replace with provider",
+    "homepage": "https://example.invalid/",
+    "retrieval_url": "https://example.invalid/snapshot",
+    "retrieved_at": "2026-09-24T00:00:00Z",
+    "content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "provenance": "REAL",
+    "collection_method": "PUBLIC_DATASET",
+    "independence_group": "replace-with-source-family",
+    "license": {
+      "name": "Replace with applicable terms/license",
+      "url": "https://example.invalid/terms",
+      "redistributable": false,
+      "research_use_allowed": true
+    }
+  },
+  "labeling": {
+    "positive_class": "PHISHING",
+    "negative_class": "LEGITIMATE",
+    "label_source": "VERIFIED_SOURCE_REVIEW",
+    "validation_reference": "replace-with-review-reference",
+    "model_predictions_used_as_ground_truth": false
+  },
+  "privacy": {
+    "contains_raw_page_content": false,
+    "contains_secrets": false,
+    "pii_review_status": "REVIEWED"
+  },
+  "grouping": {
+    "domain_group": "AVAILABLE",
+    "brand_group": "PARTIAL",
+    "time_group": "AVAILABLE",
+    "source_group": "AVAILABLE"
+  },
+  "intended_use": ["TRAIN", "SELECTION", "CALIBRATION", "TEST"],
+  "limitations": [
+    "Replace with source-specific limitations before validation."
+  ]
+}

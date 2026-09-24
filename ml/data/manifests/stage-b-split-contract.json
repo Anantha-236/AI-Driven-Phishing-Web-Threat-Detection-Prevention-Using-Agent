@@ -1,0 +1,17 @@
+{
+  "schema_version": "stage-b-split-contract-1",
+  "partition_order": ["train", "selection", "calibration", "test"],
+  "group_isolation": ["artifact_sha256", "domain_group", "brand_group", "source_group"],
+  "chronology": {
+    "field": "observed_at",
+    "strict_forward_test": true
+  },
+  "threshold_policy": {
+    "model_fit_partition": "train",
+    "candidate_selection_partition": "selection",
+    "probability_calibration_partition": "calibration",
+    "threshold_selection_partition": "calibration",
+    "final_evaluation_partition": "test"
+  },
+  "final_test_locked": true
+}
