@@ -18,6 +18,7 @@ import { transitionAgent } from '../core/agent/state-machine';
 import type { AgentAction, AgentRiskState, EnforcementOutcome, RiskDecision } from '../core/agent/types';
 import { StageBOnnxAdapter } from '../core/stage-b-onnx-adapter';
 import { createStageBShadowController } from '../core/stage-b-shadow';
+import { createStageBShadowEvidenceLedger } from '../core/stage-b-shadow-evaluation';
 
 const EVENTS_ENDPOINT = 'http://127.0.0.1:8000/api/v1/events/batch';
 const ASSESSMENTS_ENDPOINT = 'http://127.0.0.1:8000/api/v1/assessments';
@@ -71,6 +72,7 @@ export function installTypedEvents() {
     new StageBOnnxAdapter(),
     chrome.storage.session,
   );
+  const stageBShadowEvidence = createStageBShadowEvidenceLedger(chrome.storage.session);
   void stageBShadowController.initialize();
   void fetch(chrome.runtime.getURL('assets/event-model.json')).then(async response => {
     if (!response.ok) return;
@@ -369,7 +371,7 @@ export function installTypedEvents() {
       events,
       incomplete,
       baselineScore: report.model_score,
-    }).catch(() => {});
+    }).then(snapshot => stageBShadowEvidence.record(snapshot, report.action)).catch(() => {});
     const current = await chrome.webNavigation.getFrame({ tabId: tab, frameId: 0 }).catch(() => null);
     if (!current || current.documentId !== report.document_id) return;
     if (!await saveReport(report)) return;
@@ -446,9 +448,11 @@ export function installTypedEvents() {
         const frame = await chrome.webNavigation.getFrame({ tabId: tab, frameId: 0 }).catch(() => null);
         const agentRuntime = await readAgentRuntime(tab);
         const stageBShadow = await stageBShadowController.read(tab);
+        const stageBShadowEvaluation = await stageBShadowEvidence.readEvaluation();
         respond({ ok: true, report: frame && report?.document_id === frame.documentId ? report : null,
           agent_runtime: frame && agentRuntime?.document_id === frame.documentId ? agentRuntime : null,
           stage_b_shadow: frame && stageBShadow?.document_id === frame.documentId ? stageBShadow : null,
+          stage_b_shadow_evaluation: stageBShadowEvaluation,
           delivery: { backend_connected: health.connected, checked_at: health.checked_at,
             pending_events: state.pending.length, pending_report: !!pendingReport,
             dropped_events: state.dropped + state.content_dropped, content_delivery_errors: state.content_delivery_errors,
