@@ -49,3 +49,5 @@ desktop.ini
 # OneDrive / conflict noise
 *-conflict-*
 test-results.txt
+
+Upgrades/**/backups/
