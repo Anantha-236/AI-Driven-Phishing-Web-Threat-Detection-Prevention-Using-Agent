@@ -1,0 +1,23 @@
+{
+  "schema_version": "stage-b-calibration-policy-1",
+  "method": "sigmoid",
+  "primary_fpr_cap": 0.01,
+  "fpr_caps": [
+    0.01,
+    0.005,
+    0.001
+  ],
+  "confidence_level": 0.95,
+  "require_confidence_supported_threshold": true,
+  "refit_partitions": [
+    "train",
+    "selection"
+  ],
+  "calibration_partition": "calibration",
+  "test_partition": "LOCKED_NOT_USED",
+  "notes": [
+    "Sigmoid calibration is fixed a priori for Stage B.",
+    "Low-FPR threshold candidates are selected on calibration only.",
+    "Deployment authorization additionally requires empirical resolution and Wilson 95% support."
+  ]
+}

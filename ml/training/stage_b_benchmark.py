@@ -140,6 +140,9 @@ def _readiness_identity_matches(feature_data: Mapping[str, Any], readiness: Mapp
     }
     if readiness.get("feature_dataset_identity") != expected:
         raise BenchmarkError("readiness audit does not match the feature dataset identity")
+    dataset_hash = _canonical_hash(feature_data)
+    if readiness.get("feature_dataset_sha256") != dataset_hash:
+        raise BenchmarkError("readiness audit does not match the feature dataset contents")
 
 
 def _xy(feature_data: Mapping[str, Any], partition: str) -> tuple[np.ndarray, np.ndarray]:
@@ -303,6 +306,7 @@ def benchmark_stage_b_models(
             "extractor_source_sha256": validated.get("extractor_source_sha256"),
             "episode_set_sha256": validated.get("episode_set_sha256"),
         },
+        "feature_dataset_sha256": _canonical_hash(validated),
         "readiness_policy_sha256": readiness_audit.get("policy_sha256"),
         "benchmark_protocol_sha256": _canonical_hash({
             "seed": RANDOM_SEED,

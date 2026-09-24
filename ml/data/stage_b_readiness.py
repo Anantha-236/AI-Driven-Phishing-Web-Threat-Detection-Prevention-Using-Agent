@@ -229,6 +229,7 @@ def audit_feature_dataset_readiness(
         "status": "PASS" if not issues else "FAIL",
         "training_allowed": not issues,
         "policy_sha256": _canonical_hash(active_policy),
+        "feature_dataset_sha256": _canonical_hash(validated),
         "feature_dataset_identity": {
             "feature_version": validated.get("feature_version"),
             "feature_contract_sha256": validated.get("feature_contract_sha256"),

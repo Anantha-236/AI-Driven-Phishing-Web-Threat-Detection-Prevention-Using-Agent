@@ -74,6 +74,7 @@ def test_ready_dataset_passes_and_reports_identity_and_counts():
     assert result["training_allowed"] is True
     assert result["counts"]["test"] == {"total": 4, "legitimate": 2, "phishing": 2}
     assert result["feature_dataset_identity"]["feature_version"] == "context-features-1"
+    assert len(result["feature_dataset_sha256"]) == 64
     assert result["chronology"]["strict_forward"] is True
 
 

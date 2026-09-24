@@ -70,6 +70,7 @@ def readiness(data=None):
         "status": "PASS",
         "training_allowed": True,
         "policy_sha256": "4" * 64,
+        "feature_dataset_sha256": h(data),
         "feature_dataset_identity": {
             "feature_version": data["feature_version"],
             "feature_contract_sha256": data["feature_contract_sha256"],
@@ -99,6 +100,11 @@ def test_requires_passed_matching_readiness_gate():
     gate = readiness(data)
     gate["feature_dataset_identity"]["episode_set_sha256"] = "9" * 64
     with pytest.raises(BenchmarkError, match="does not match"):
+        benchmark_stage_b_models(data, gate)
+
+    gate = readiness(data)
+    gate["feature_dataset_sha256"] = "8" * 64
+    with pytest.raises(BenchmarkError, match="contents"):
         benchmark_stage_b_models(data, gate)
 
 
