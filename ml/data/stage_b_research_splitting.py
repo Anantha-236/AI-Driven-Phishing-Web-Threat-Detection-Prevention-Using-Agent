@@ -246,31 +246,101 @@ def _contains_both(components: Iterable[Mapping[str, Any]]) -> bool:
 def _choose_test_suffix(
     components: list[dict[str, Any]],
     target_count: float,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+) -> tuple[
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+]:
+    # Connected components enforce artifact/domain/brand isolation. A
+    # component can legitimately span a long time window. Such a component
+    # cannot be placed on either side of a strict-forward cutoff without
+    # weakening chronology or group isolation, so quarantine it instead.
+    cutoffs = sorted({component["min_time"] for component in components})
     candidates = []
-    for boundary in range(1, len(components)):
-        prefix, suffix = components[:boundary], components[boundary:]
+
+    for cutoff in cutoffs:
+        prefix = [
+            component
+            for component in components
+            if component["max_time"] < cutoff
+        ]
+        suffix = [
+            component
+            for component in components
+            if component["min_time"] >= cutoff
+        ]
+        bridge_ids = {
+            component["component_id"]
+            for component in components
+            if component["min_time"] < cutoff <= component["max_time"]
+        }
+        bridges = [
+            component
+            for component in components
+            if component["component_id"] in bridge_ids
+        ]
+
+        if not prefix or not suffix:
+            continue
         if not _contains_both(suffix):
             continue
-        if max(c["max_time"] for c in prefix) >= min(c["min_time"] for c in suffix):
-            continue
+
         counts = _label_component_counts(prefix)
         if counts[0] < 3 or counts[1] < 3:
             continue
-        suffix_count = sum(c["sample_count"] for c in suffix)
+
+        latest_prefix = max(component["max_time"] for component in prefix)
+        earliest_suffix = min(component["min_time"] for component in suffix)
+        if latest_prefix >= earliest_suffix:
+            continue
+
+        suffix_count = sum(component["sample_count"] for component in suffix)
+        bridge_sample_count = sum(
+            component["sample_count"] for component in bridges
+        )
+
+        objective = abs(suffix_count - target_count) + bridge_sample_count
+
         candidates.append((
+            objective,
+            bridge_sample_count,
             abs(suffix_count - target_count),
             suffix_count,
-            suffix[0]["component_id"],
+            cutoff.isoformat(),
             prefix,
             suffix,
+            bridges,
         ))
+
     if not candidates:
+        label_windows = {}
+        for label in (0, 1):
+            matching = [
+                component
+                for component in components
+                if label in component["labels"]
+            ]
+            label_windows[str(label)] = {
+                "component_count": len(matching),
+                "earliest": (
+                    min(component["min_time"] for component in matching).isoformat()
+                    if matching else None
+                ),
+                "latest": (
+                    max(component["max_time"] for component in matching).isoformat()
+                    if matching else None
+                ),
+            }
         raise ResearchSplitError(
-            "cannot create strict-forward research test while preserving four class-covered partitions"
+            "cannot create strict-forward research test even after temporal-bridge "
+            f"quarantine; label_windows={label_windows}"
         )
-    candidates.sort(key=lambda item: (item[0], item[1], item[2]))
-    return candidates[0][3], candidates[0][4]
+
+    candidates.sort(
+        key=lambda item: (item[0], item[1], item[2], item[3], item[4])
+    )
+    selected = candidates[0]
+    return selected[5], selected[6], selected[7]
 
 
 def _can_reserve(
@@ -421,7 +491,7 @@ def construct_research_archive_splits(
         )
 
     total = len(rows)
-    pre_test, test_components = _choose_test_suffix(
+    pre_test, test_components, chronology_bridge_components = _choose_test_suffix(
         components, total * float(active_fractions["test"])
     )
     selection_components, remaining = _choose_partition(
@@ -481,11 +551,19 @@ def construct_research_archive_splits(
         "partitions": partitions,
         "excluded": {
             "unlabeled_candidates": [],
-            "upstream_quarantine_groups": [],
+            "upstream_quarantine_groups": sorted(
+                component["component_id"]
+                for component in chronology_bridge_components
+            ),
         },
         "audit": {
             "final_test_locked": True,
             "strict_forward_test": True,
+            "chronology_bridge_component_count": len(chronology_bridge_components),
+            "chronology_bridge_sample_count": sum(
+                component["sample_count"]
+                for component in chronology_bridge_components
+            ),
             "test_min_observed_at": min(test_times).isoformat(),
             "non_test_max_observed_at": max(non_test_times).isoformat(),
             "isolation_group_counts": isolation_counts,
@@ -504,6 +582,7 @@ def construct_research_archive_splits(
             "This protocol intentionally relaxes source-group independence because all samples come from one declared archive source.",
             "Artifact, domain and brand connected components remain isolated across all four partitions.",
             "The final test is strictly later than all non-test records under declared observed_at metadata.",
+            "Connected components that cross the selected strict-forward cutoff are quarantined rather than weakening chronology or group isolation.",
             "A PASS research split cannot be interpreted as production readiness or deployment authorization.",
             "Archive capture biases and shared collection methodology may create dependencies not represented by artifact/domain/brand metadata.",
         ],

@@ -132,3 +132,47 @@ def test_refuses_contract_that_accidentally_authorizes_deployment():
 def test_refuses_too_few_independent_components_for_four_partitions():
     with pytest.raises(ResearchSplitError, match="insufficient"):
         construct_research_archive_splits(normalized_plan(count=6), contract())
+
+def test_temporal_bridge_component_is_quarantined_without_weakening_forward_test():
+    data = normalized_plan(count=24)
+
+    data["items"][2]["brand_group"] = "long-lived-shared-brand"
+    data["items"][23]["brand_group"] = "long-lived-shared-brand"
+
+    result = construct_research_archive_splits(data, contract())
+
+    assert result["audit"]["strict_forward_test"] is True
+    assert result["audit"]["chronology_bridge_component_count"] >= 1
+    assert result["audit"]["chronology_bridge_sample_count"] >= 2
+    assert result["excluded"]["upstream_quarantine_groups"]
+
+    test_times = [
+        datetime.fromisoformat(row["observed_at"])
+        for row in result["partitions"]["test"]["records"]
+    ]
+    non_test_times = [
+        datetime.fromisoformat(row["observed_at"])
+        for partition in ("train", "selection", "calibration")
+        for row in result["partitions"][partition]["records"]
+    ]
+    assert min(test_times) > max(non_test_times)
+
+    supervised_brands = {
+        row["brand_group"]
+        for payload in result["partitions"].values()
+        for row in payload["records"]
+    }
+    assert "long-lived-shared-brand" not in supervised_brands
+
+
+def test_temporal_bridge_quarantine_remains_deterministic():
+    data = normalized_plan(count=24)
+    data["items"][2]["brand_group"] = "long-lived-shared-brand"
+    data["items"][23]["brand_group"] = "long-lived-shared-brand"
+
+    first = construct_research_archive_splits(data, contract())
+    second = construct_research_archive_splits(data, contract())
+
+    assert first == second
+    assert first["excluded"]["upstream_quarantine_groups"] == second["excluded"]["upstream_quarantine_groups"]
+
