@@ -1,0 +1,37 @@
+{
+  "schema_version": "stage-b-external-source-files-1",
+  "dataset_id": "zenodo-8041387",
+  "record": "https://doi.org/10.5281/zenodo.8041387",
+  "pilot_files": [
+    {
+      "name": "brands.csv",
+      "size_display": "17.0 kB",
+      "md5": "4194175e26f89582dd0a641b34f897de"
+    },
+    {
+      "name": "phishing.csv",
+      "size_display": "61.5 MB",
+      "md5": "513962464c413fc30b2030547a12868a"
+    },
+    {
+      "name": "not-phishing.csv",
+      "size_display": "107.4 MB",
+      "md5": "f5d218eb67f5d7bd0571e8089a8fc392"
+    },
+    {
+      "name": "phishing_5001-5151.zip",
+      "size_display": "215.1 MB",
+      "md5": "50970df93524466719b61b24f48679e3"
+    },
+    {
+      "name": "not-phishing_5001-5244.zip",
+      "size_display": "1.6 GB",
+      "md5": "fbc1035a63b8bf84b6945e1449e94359"
+    }
+  ],
+  "notes": [
+    "File names, displayed sizes and MD5 values are pinned from Zenodo record 8041387.",
+    "The two tail shards are selected for pilot work because they are smaller than the first 500-site shards.",
+    "This manifest does not assert a license; the adapter requires an explicit local license/reference acknowledgment."
+  ]
+}
