@@ -66,6 +66,16 @@ function isDurableReport(payload: unknown): payload is EventSecurityReport {
     typeof payload.outcome === 'string';
 }
 
+function classifyContentBatchStorageError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/quota|QUOTA_BYTES/i.test(message)) return 'SESSION_STORAGE_QUOTA';
+  if (/out of order content batch/i.test(message)) return 'OUT_OF_ORDER_CONTENT_BATCH';
+  if (/receipt capacity/i.test(message)) return 'CONTENT_RECEIPT_CAPACITY';
+  if (/identity reused/i.test(message)) return 'BATCH_IDENTITY_REUSE';
+  if (/invalid sanitized batch/i.test(message)) return 'INVALID_SANITIZED_BATCH';
+  return 'EVENT_STORAGE_ERROR';
+}
+
 export function installTypedEvents() {
   let model: EventModelArtifact | null = null;
   const stageBShadowController = createStageBShadowController(
@@ -473,7 +483,11 @@ export function installTypedEvents() {
         frame_origin: safeOrigin(sender.origin === undefined ? sender.url : sender.origin), initiator_origin: null,
         destination_origin: null, request_type: null })) }, {
         tab_id: tab, document_id: sender.documentId || null, frame_id: sender.frameId ?? 0, parent_frame_id: null, trust: 'ISOLATED_CONTENT_SCRIPT',
-      }).then(receipt => { schedule(tab); respond(receipt); }).catch(() => respond({ ok: false, error: 'Event storage failed' }));
+      }).then(receipt => { schedule(tab); respond(receipt); }).catch(error => respond({
+        ok: false,
+        error: 'Event storage failed',
+        error_code: classifyContentBatchStorageError(error),
+      }));
       return true;
     }
     if (message?.type === 'EXPORT_TSFEG') {

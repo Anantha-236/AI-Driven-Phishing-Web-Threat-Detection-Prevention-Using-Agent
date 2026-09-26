@@ -92,10 +92,28 @@ export function validateContentBatch(input: unknown): input is ContentBatch {
     Number.isSafeInteger(batch.delivery_errors) && batch.delivery_errors >= 0 &&
     Array.isArray(batch.events) && batch.events.length > 0 && batch.events.length <= 100 && batch.events.every(validateObservation);
 }
-export function createContentEventQueue(send: (batch: ContentBatch) => Promise<unknown>) {
+export interface ContentEventQueueOptions {
+  acknowledgementTimeoutMs?: number;
+  retryDelayMs?: number;
+}
+export function createContentEventQueue(
+  send: (batch: ContentBatch) => Promise<unknown>,
+  options: ContentEventQueueOptions = {},
+) {
   const source_id = crypto.randomUUID();
   const queue: Array<Pick<ContentBatch, 'batch_seq' | 'events'>> = [];
+  const acknowledgementTimeoutMs =
+    Number.isFinite(options.acknowledgementTimeoutMs) &&
+    Number(options.acknowledgementTimeoutMs) > 0
+      ? Number(options.acknowledgementTimeoutMs)
+      : 3000;
+  const retryDelayMs =
+    Number.isFinite(options.retryDelayMs) &&
+    Number(options.retryDelayMs) >= 0
+      ? Number(options.retryDelayMs)
+      : 1000;
   let nextBatch = 1, queued = 0, dropped = 0, errors = 0;
+  let lastDeliveryErrorCode: string | null = null;
   let active: Promise<void> | null = null;
   let retry: ReturnType<typeof setTimeout> | undefined;
   // ponytail: 2000 events per live document; overflow drops newest events and is counted.
@@ -110,16 +128,58 @@ export function createContentEventQueue(send: (batch: ContentBatch) => Promise<u
           let deadline: ReturnType<typeof setTimeout> | undefined;
           const reply = await Promise.race([
             send({ type: 'TYPED_EVENTS', source_id, ...batch, dropped_events: dropped, delivery_errors: errors }),
-            new Promise((_, reject) => { deadline = setTimeout(() => reject(new Error('Acknowledgement timeout')), 3000); }),
+            new Promise((_, reject) => {
+              deadline = setTimeout(
+                () => reject(new Error('Acknowledgement timeout')),
+                acknowledgementTimeoutMs,
+              );
+            }),
           ]).finally(() => clearTimeout(deadline));
-          const ack = reply as { ok?: unknown; source_id?: unknown; batch_seq?: unknown; accepted?: unknown } | null;
-          if (!ack || ack.ok !== true || ack.source_id !== source_id || ack.batch_seq !== batch.batch_seq || ack.accepted !== batch.events.length) throw new Error('Missing batch acknowledgement');
+          const ack = reply as {
+            ok?: unknown;
+            source_id?: unknown;
+            batch_seq?: unknown;
+            accepted?: unknown;
+            error_code?: unknown;
+          } | null;
+          if (
+            !ack ||
+            ack.ok !== true ||
+            ack.source_id !== source_id ||
+            ack.batch_seq !== batch.batch_seq ||
+            ack.accepted !== batch.events.length
+          ) {
+            const failure = new Error('Missing batch acknowledgement') as Error & {
+              replayCode?: string;
+            };
+            failure.replayCode =
+              typeof ack?.error_code === 'string' &&
+              /^[A-Z0-9_]{1,64}$/.test(ack.error_code)
+                ? ack.error_code
+                : 'ACK_REJECTED';
+            throw failure;
+          }
+          lastDeliveryErrorCode = null;
           queue.shift(); queued -= batch.events.length;
-        } catch { errors++; return; }
+        } catch (error) {
+          errors++;
+          const coded = error as Error & { replayCode?: string };
+          lastDeliveryErrorCode =
+            coded.replayCode ||
+            (coded.message === 'Acknowledgement timeout'
+              ? 'ACK_TIMEOUT'
+              : 'MESSAGE_SEND_FAILED');
+          return;
+        }
       }
     })().finally(() => {
       active = null;
-      if (queue.length) retry = setTimeout(() => { retry = undefined; void flush(); }, 1000);
+      if (queue.length) {
+        retry = setTimeout(() => {
+          retry = undefined;
+          void flush();
+        }, retryDelayMs);
+      }
     });
     return active;
   }
@@ -134,7 +194,13 @@ export function createContentEventQueue(send: (batch: ContentBatch) => Promise<u
       if (retry === undefined) void flush();
     },
     flush,
-    snapshot: () => ({ source_id, queued_events: queued, dropped_events: dropped, delivery_errors: errors }),
+    snapshot: () => ({
+      source_id,
+      queued_events: queued,
+      dropped_events: dropped,
+      delivery_errors: errors,
+      last_delivery_error_code: lastDeliveryErrorCode,
+    }),
   };
 }
 export interface SessionStorage {

@@ -209,7 +209,19 @@ const isTestingEnvironment = typeof process !== "undefined" && !!process.env?.VI
 if (typeof window !== "undefined" && typeof document !== "undefined" && !isTestingEnvironment) {
   try {
     setContentScriptStartupMarker();
-    const transport = createContentEventQueue(batch => chrome.runtime.sendMessage(batch));
+    const archiveReplayPage =
+      location.hostname === '127.0.0.1' &&
+      /^\/sample\/[a-f0-9]{32}\/?$/.test(location.pathname);
+    const archiveReplayAcknowledgementTimeoutMs = 10_000;
+    const transport = createContentEventQueue(
+      batch => chrome.runtime.sendMessage(batch),
+      archiveReplayPage
+        ? {
+            acknowledgementTimeoutMs: archiveReplayAcknowledgementTimeoutMs,
+            retryDelayMs: 250,
+          }
+        : undefined,
+    );
     const typed = createTypedEvents(document, transport.enqueue);
     typed.start();
 
@@ -238,6 +250,10 @@ if (typeof window !== "undefined" && typeof document !== "undefined" && !isTesti
             sendResponse({ outcome: 'WARNING_DISPLAYED' }); return false;
           }
           if (runtimeMessage.type === "GET_TYPED_EVENT_STATUS") {
+            // Archive replay polling is also an explicit retry signal. This is
+            // safe because flush() is idempotent while a send is active and
+            // merely cancels the delayed retry timer when one is pending.
+            void transport.flush();
             sendResponse({ ok: true, ...transport.snapshot() });
             return false;
           }

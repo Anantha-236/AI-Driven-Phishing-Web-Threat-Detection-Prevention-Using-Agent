@@ -1,0 +1,267 @@
+{
+  "schema_version": "zenodo-8041387-full-file-inventory-1",
+  "dataset_id": "zenodo-8041387",
+  "record": "https://zenodo.org/records/8041387",
+  "doi": "10.5281/zenodo.8041387",
+  "published": "2023-07-02",
+  "dataset_counts": {
+    "phishing": 5151,
+    "legitimate": 5244,
+    "target_brands": 86
+  },
+  "record_total_size_display": "38.5 GB",
+  "size_bytes_estimated_note": "Archive byte counts are decimal estimates derived from Zenodo's displayed sizes and are used only for planning/ranking. MD5 values and filenames are pinned exactly from the record.",
+  "files": [
+    {
+      "name": "brands.csv",
+      "kind": "metadata",
+      "class": null,
+      "start": null,
+      "end": null,
+      "size_display": "17.0 kB",
+      "size_bytes_estimated": 17000,
+      "md5": "4194175e26f89582dd0a641b34f897de"
+    },
+    {
+      "name": "not-phishing.csv",
+      "kind": "metadata",
+      "class": "legitimate",
+      "start": 1,
+      "end": 5244,
+      "size_display": "107.4 MB",
+      "size_bytes_estimated": 107400000,
+      "md5": "f5d218eb67f5d7bd0571e8089a8fc392"
+    },
+    {
+      "name": "phishing.csv",
+      "kind": "metadata",
+      "class": "phishing",
+      "start": 1,
+      "end": 5151,
+      "size_display": "61.5 MB",
+      "size_bytes_estimated": 61500000,
+      "md5": "513962464c413fc30b2030547a12868a"
+    },
+    {
+      "name": "not-phishing_0001-0500.zip",
+      "kind": "archive",
+      "class": "legitimate",
+      "start": 1,
+      "end": 500,
+      "size_display": "3.6 GB",
+      "size_bytes_estimated": 3600000000,
+      "md5": "cf446e4cec1a587d8d72be7235517848"
+    },
+    {
+      "name": "not-phishing_0501-1000.zip",
+      "kind": "archive",
+      "class": "legitimate",
+      "start": 501,
+      "end": 1000,
+      "size_display": "2.9 GB",
+      "size_bytes_estimated": 2900000000,
+      "md5": "8d632750a042f8d4340d4cb640f9d9f1"
+    },
+    {
+      "name": "not-phishing_1001-1500.zip",
+      "kind": "archive",
+      "class": "legitimate",
+      "start": 1001,
+      "end": 1500,
+      "size_display": "2.5 GB",
+      "size_bytes_estimated": 2500000000,
+      "md5": "4b55e08e1e85f67dc7d57c6dd2e5db46"
+    },
+    {
+      "name": "not-phishing_1501-2000.zip",
+      "kind": "archive",
+      "class": "legitimate",
+      "start": 1501,
+      "end": 2000,
+      "size_display": "2.3 GB",
+      "size_bytes_estimated": 2300000000,
+      "md5": "caf3b0379578d38fac6c7c04fb5f459c"
+    },
+    {
+      "name": "not-phishing_2001-2500.zip",
+      "kind": "archive",
+      "class": "legitimate",
+      "start": 2001,
+      "end": 2500,
+      "size_display": "2.9 GB",
+      "size_bytes_estimated": 2900000000,
+      "md5": "f63c8e8f265bce5d33eeedb377aa3132"
+    },
+    {
+      "name": "not-phishing_2501-3000.zip",
+      "kind": "archive",
+      "class": "legitimate",
+      "start": 2501,
+      "end": 3000,
+      "size_display": "2.5 GB",
+      "size_bytes_estimated": 2500000000,
+      "md5": "98f9215b683340ed62c55d884fdcd818"
+    },
+    {
+      "name": "not-phishing_3001-3500.zip",
+      "kind": "archive",
+      "class": "legitimate",
+      "start": 3001,
+      "end": 3500,
+      "size_display": "3.0 GB",
+      "size_bytes_estimated": 3000000000,
+      "md5": "63873ccf15834063fea01f16578f60d7"
+    },
+    {
+      "name": "not-phishing_3501-4000.zip",
+      "kind": "archive",
+      "class": "legitimate",
+      "start": 3501,
+      "end": 4000,
+      "size_display": "3.1 GB",
+      "size_bytes_estimated": 3100000000,
+      "md5": "77b3a19590832dfc36018b5ea79a322b"
+    },
+    {
+      "name": "not-phishing_4001-4500.zip",
+      "kind": "archive",
+      "class": "legitimate",
+      "start": 4001,
+      "end": 4500,
+      "size_display": "2.4 GB",
+      "size_bytes_estimated": 2400000000,
+      "md5": "8bb3c3dc1dfabf3c6a333f95b1619261"
+    },
+    {
+      "name": "not-phishing_4501-5000.zip",
+      "kind": "archive",
+      "class": "legitimate",
+      "start": 4501,
+      "end": 5000,
+      "size_display": "2.9 GB",
+      "size_bytes_estimated": 2900000000,
+      "md5": "2186e9593bb7bd80e5bfcb3ecddaf4ec"
+    },
+    {
+      "name": "not-phishing_5001-5244.zip",
+      "kind": "archive",
+      "class": "legitimate",
+      "start": 5001,
+      "end": 5244,
+      "size_display": "1.6 GB",
+      "size_bytes_estimated": 1600000000,
+      "md5": "fbc1035a63b8bf84b6945e1449e94359"
+    },
+    {
+      "name": "phishing_0001-0500.zip",
+      "kind": "archive",
+      "class": "phishing",
+      "start": 1,
+      "end": 500,
+      "size_display": "808.1 MB",
+      "size_bytes_estimated": 808100000,
+      "md5": "5bf11b02abf019287d766b749d9d6f61"
+    },
+    {
+      "name": "phishing_0501-1000.zip",
+      "kind": "archive",
+      "class": "phishing",
+      "start": 501,
+      "end": 1000,
+      "size_display": "923.5 MB",
+      "size_bytes_estimated": 923500000,
+      "md5": "1dd12c51bddc79e7f7b491fcffa78725"
+    },
+    {
+      "name": "phishing_1001-1500.zip",
+      "kind": "archive",
+      "class": "phishing",
+      "start": 1001,
+      "end": 1500,
+      "size_display": "884.7 MB",
+      "size_bytes_estimated": 884700000,
+      "md5": "a64bc89da4e0e8590395be0d392ccf10"
+    },
+    {
+      "name": "phishing_1501-2000.zip",
+      "kind": "archive",
+      "class": "phishing",
+      "start": 1501,
+      "end": 2000,
+      "size_display": "774.5 MB",
+      "size_bytes_estimated": 774500000,
+      "md5": "69ab2d53a0b4096f98741b12ddbde377"
+    },
+    {
+      "name": "phishing_2001-2500.zip",
+      "kind": "archive",
+      "class": "phishing",
+      "start": 2001,
+      "end": 2500,
+      "size_display": "901.1 MB",
+      "size_bytes_estimated": 901100000,
+      "md5": "896405a2b2f7755935b5f7bf6a01770a"
+    },
+    {
+      "name": "phishing_2501-3000.zip",
+      "kind": "archive",
+      "class": "phishing",
+      "start": 2501,
+      "end": 3000,
+      "size_display": "789.8 MB",
+      "size_bytes_estimated": 789800000,
+      "md5": "907f9f661b477a45e3eac1e28ed3ce6a"
+    },
+    {
+      "name": "phishing_3001-3500.zip",
+      "kind": "archive",
+      "class": "phishing",
+      "start": 3001,
+      "end": 3500,
+      "size_display": "889.7 MB",
+      "size_bytes_estimated": 889700000,
+      "md5": "1d7de78695c42f92118695d17849c53c"
+    },
+    {
+      "name": "phishing_3501-4000.zip",
+      "kind": "archive",
+      "class": "phishing",
+      "start": 3501,
+      "end": 4000,
+      "size_display": "793.5 MB",
+      "size_bytes_estimated": 793500000,
+      "md5": "7a1355fac560498accc2a90a99974575"
+    },
+    {
+      "name": "phishing_4001-4500.zip",
+      "kind": "archive",
+      "class": "phishing",
+      "start": 4001,
+      "end": 4500,
+      "size_display": "763.8 MB",
+      "size_bytes_estimated": 763800000,
+      "md5": "e7e6820d53a76957861bb751516f8c93"
+    },
+    {
+      "name": "phishing_4501-5000.zip",
+      "kind": "archive",
+      "class": "phishing",
+      "start": 4501,
+      "end": 5000,
+      "size_display": "851.3 MB",
+      "size_bytes_estimated": 851300000,
+      "md5": "f1d46f07dcc01b3c0647f3e134a4f73c"
+    },
+    {
+      "name": "phishing_5001-5151.zip",
+      "kind": "archive",
+      "class": "phishing",
+      "start": 5001,
+      "end": 5151,
+      "size_display": "215.1 MB",
+      "size_bytes_estimated": 215100000,
+      "md5": "50970df93524466719b61b24f48679e3"
+    }
+  ],
+  "source_note": "Inventory verified against the Zenodo 8041387 record on 2026-09-25."
+}

@@ -172,20 +172,79 @@ async function startReplayServer(plan, archiveRoot) {
   };
 }
 
-async function waitForQueueDrain(worker, tabId, timeoutMs = 8000) {
+async function waitForQueueDrain(
+  worker,
+  tabId,
+  {
+    totalTimeoutMs = 90_000,
+    stallTimeoutMs = 30_000,
+    pollMs = 100,
+  } = {},
+) {
   const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
+  let lastProgressAt = start;
+  let lastQueued = null;
+  let lastStatus = null;
+
+  while (Date.now() - start < totalTimeoutMs) {
     const status = await worker.evaluate(async id => {
       try {
-        return await chrome.tabs.sendMessage(id, { type: 'GET_TYPED_EVENT_STATUS' });
+        return await chrome.tabs.sendMessage(
+          id,
+          { type: 'GET_TYPED_EVENT_STATUS' },
+        );
       } catch {
         return null;
       }
     }, tabId);
-    if (status?.queued_events === 0) return status;
-    await new Promise(resolveDelay => setTimeout(resolveDelay, 100));
+
+    const now = Date.now();
+    if (
+      status &&
+      Number.isSafeInteger(status.queued_events) &&
+      status.queued_events >= 0
+    ) {
+      lastStatus = status;
+
+      if (
+        Number.isSafeInteger(status.dropped_events) &&
+        status.dropped_events > 0
+      ) {
+        throw new Error(
+          `typed event queue dropped events: ` +
+          `dropped_events=${status.dropped_events}`,
+        );
+      }
+
+      if (status.queued_events === 0) return status;
+
+      if (lastQueued === null || status.queued_events < lastQueued) {
+        lastProgressAt = now;
+      }
+      lastQueued = status.queued_events;
+
+      if (now - lastProgressAt >= stallTimeoutMs) {
+        throw new Error(
+          `typed event queue stalled: ` +
+          `queued_events=${status.queued_events}, ` +
+          `delivery_errors=${Number(status.delivery_errors || 0)}, ` +
+          `last_delivery_error_code=${String(status.last_delivery_error_code || 'NONE')}, ` +
+          `stall_ms=${now - lastProgressAt}`,
+        );
+      }
+    } else if (now - lastProgressAt >= stallTimeoutMs) {
+      throw new Error(
+        `typed event queue status unavailable for ${now - lastProgressAt} ms`,
+      );
+    }
+
+    await new Promise(resolveDelay => setTimeout(resolveDelay, pollMs));
   }
-  throw new Error('typed event queue did not drain');
+
+  throw new Error(
+    `typed event queue did not drain within ${totalTimeoutMs} ms; ` +
+    `last_status=${JSON.stringify(lastStatus)}`,
+  );
 }
 
 async function readTabState(worker, pageUrl) {
@@ -198,6 +257,30 @@ async function readTabState(worker, pageUrl) {
     const state = (await chrome.storage.session.get(key))[key];
     return { tabId: tab.id, state };
   }, pageUrl);
+}
+
+async function chromeSessionReset(worker) {
+  return worker.evaluate(async () => {
+    await chrome.storage.session.clear();
+    return chrome.storage.session.getBytesInUse(null).catch(() => null);
+  });
+}
+
+async function clearReplaySessionState(worker) {
+  // Archive replay runs in a dedicated ephemeral Chromium profile. Once an
+  // episode snapshot has been captured and its page is closed, retaining
+  // closed-tab recorder state has no research value and can exhaust the
+  // extension session-storage quota across a large batch.
+  return worker.evaluate(async () => {
+    // Let the normal 100 ms analysis and 500 ms flush schedulers settle first.
+    await new Promise(resolveDelay => setTimeout(resolveDelay, 750));
+    const beforeBytes = await chrome.storage.session.getBytesInUse(null)
+      .catch(() => null);
+    await chrome.storage.session.clear();
+    const afterBytes = await chrome.storage.session.getBytesInUse(null)
+      .catch(() => null);
+    return { beforeBytes, afterBytes };
+  });
 }
 
 async function collectItem(context, worker, replay, item) {
@@ -251,6 +334,12 @@ async function collectItem(context, worker, replay, item) {
     };
   } finally {
     await page.close().catch(() => {});
+    await clearReplaySessionState(worker).catch(error => {
+      console.warn(
+        '[Stage B archive replay] session cleanup failed:',
+        error instanceof Error ? error.message : String(error),
+      );
+    });
   }
 }
 
@@ -288,6 +377,7 @@ async function main() {
   const failures = [];
   try {
     const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+    await chromeSessionReset(worker);
     for (const item of plan.items) {
       try {
         episodes.push(await collectItem(context, worker, replay, item));

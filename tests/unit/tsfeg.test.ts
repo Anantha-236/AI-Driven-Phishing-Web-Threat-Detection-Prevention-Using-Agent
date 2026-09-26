@@ -64,6 +64,35 @@ it('recovers from a message promise that never settles', async () => {
   expect(queue.snapshot().queued_events).toBe(0);
 });
 
+it('allows a replay-scoped acknowledgement window without changing queue semantics', async () => {
+  vi.useFakeTimers();
+  const queue = createContentEventQueue(
+    async batch => {
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      return {
+        ok: true,
+        source_id: batch.source_id,
+        batch_seq: batch.batch_seq,
+        accepted: batch.events.length,
+      };
+    },
+    { acknowledgementTimeoutMs: 10_000, retryDelayMs: 250 },
+  );
+
+  queue.enqueue([observation({ event_type: 'DOCUMENT_STARTED' })]);
+  await vi.advanceTimersByTimeAsync(3999);
+  expect(queue.snapshot()).toMatchObject({
+    queued_events: 1,
+    delivery_errors: 0,
+  });
+  await vi.advanceTimersByTimeAsync(1);
+  expect(queue.snapshot()).toMatchObject({
+    queued_events: 0,
+    delivery_errors: 0,
+    dropped_events: 0,
+  });
+});
+
 it('keeps local recording available during an unresolved backend request', async () => {
   let release!: () => void;
   const blocked = new Promise<void>(resolve => { release = resolve; });
