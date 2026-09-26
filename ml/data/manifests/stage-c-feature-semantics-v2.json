@@ -1,0 +1,73 @@
+{
+  "schema_version": "stage-c-feature-semantics-2",
+  "source_feature_version": "context-features-1",
+  "design_principle": "Separate page-purpose/context observations from maliciousness evidence.",
+  "groups": {
+    "evidence_quality": [
+      "document_started",
+      "unknown_document_ratio",
+      "known_target_ratio",
+      "purpose_observed"
+    ],
+    "page_context": [
+      "has_password",
+      "has_otp",
+      "has_payment",
+      "has_identity",
+      "purpose_authentication",
+      "purpose_payment",
+      "purpose_unknown",
+      "sensitive_form_count"
+    ],
+    "consistency_or_trust": [
+      "same_origin_sensitive_target",
+      "stable_sensitive_target",
+      "positive_evidence_count",
+      "purpose_context_consistent"
+    ],
+    "mismatch_or_risk_evidence": [
+      "cross_origin_sensitive_target",
+      "sensitive_target_changed",
+      "target_changed_after_interaction",
+      "submission_target_mismatch",
+      "https_downgrade_sensitive_target",
+      "password_then_otp",
+      "dynamic_sensitive_field",
+      "foreign_frame_sensitive_field",
+      "cross_request_near_interaction",
+      "contradiction_count",
+      "purpose_sensitive_mismatch"
+    ]
+  },
+  "rules": {
+    "page_context_is_not_intrinsically_malicious": true,
+    "consistency_or_trust_is_not_intrinsically_benign": true,
+    "risk_evidence_requires_contextual_interpretation": true,
+    "brand_group_model_observable": false,
+    "raw_url_model_observable": false,
+    "literal_origin_model_observable": false,
+    "sample_id_model_observable": false
+  },
+  "stage_c_feature_workstreams": [
+    {
+      "id": "purpose-risk-decoupling",
+      "goal": "prevent login/payment presence from acting as a phishing proxy"
+    },
+    {
+      "id": "destination-mismatch",
+      "goal": "strengthen form-action/origin/destination inconsistency signals"
+    },
+    {
+      "id": "interaction-exfiltration",
+      "goal": "strengthen credential-interaction followed by suspicious destination/request behavior"
+    },
+    {
+      "id": "weak-signal-phishing",
+      "goal": "represent phishing where explicit authentication-purpose signals are absent or delayed"
+    },
+    {
+      "id": "hard-legitimate-authentication",
+      "goal": "increase legitimate authentication/payment coverage in development data"
+    }
+  ]
+}

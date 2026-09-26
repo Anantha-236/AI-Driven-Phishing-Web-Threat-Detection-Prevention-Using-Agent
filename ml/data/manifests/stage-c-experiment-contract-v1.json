@@ -1,0 +1,48 @@
+{
+  "schema_version": "stage-c-experiment-contract-1",
+  "stage": "C",
+  "protocol_id": "low-fpr-generalization-v1",
+  "research_only": true,
+  "deployment_authorized": false,
+  "parent_generation": {
+    "name": "stage-b-contextual-v2",
+    "final_evidence_commit": "71213971f2f2e455d8de854a1dc88c13c17ea20a",
+    "pre_final_commit": "9f9c8401d38aa353e760c02ea57517deaeca3506",
+    "final_test_partition_sha256": "a7d83608610370f7772ee2820bdf0229cd14e97c6f18143130125c7db7a4fd2d",
+    "final_test_score_sha256": "46c2ec3747bceb7fdc950ddea1ea5733f37efe023cde9d6782f8c3fc0a3de438",
+    "consumed": true,
+    "reuse_as_fresh_final_test_prohibited": true
+  },
+  "objective": {
+    "primary_metric": "false_positive_rate",
+    "primary_fpr_cap": 0.01,
+    "confidence_level": 0.95,
+    "require_observed_fpr_at_or_below_cap": true,
+    "require_wilson_upper_at_or_below_cap": true,
+    "secondary_metric": "recall",
+    "secondary_objective": "maximize recall subject to primary low-FPR constraints"
+  },
+  "holdout_contract": {
+    "new_final_holdout_required": true,
+    "stage_b_final_test_samples_prohibited": true,
+    "selection_use_prohibited": true,
+    "calibration_use_prohibited": true,
+    "threshold_selection_use_prohibited": true,
+    "minimum_legitimate_samples_for_zero_fp_wilson_resolution": 381,
+    "recommended_legitimate_samples": 1200,
+    "recommended_phishing_samples": 1000,
+    "strict_forward_preferred": true,
+    "independent_source_preferred": true
+  },
+  "development_contract": {
+    "allowed_partitions": [
+      "train",
+      "selection",
+      "calibration"
+    ],
+    "test_locked_until_candidate_and_threshold_frozen": true,
+    "hard_legitimate_negatives_required": true,
+    "weak_signal_phishing_required": true,
+    "purpose_context_must_not_be_treated_as_maliciousness_by_definition": true
+  }
+}
