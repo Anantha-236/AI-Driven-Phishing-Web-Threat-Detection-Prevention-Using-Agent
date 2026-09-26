@@ -1,0 +1,46 @@
+{
+  "schema_version": "stage-c-development-split-planning-policy-1",
+  "stage": "C",
+  "research_only": true,
+  "deployment_authorized": false,
+  "purpose": "planning-only feasibility audit before Stage-C feature extraction/training",
+  "quarantine_rules": {
+    "cross_label_exact_artifact_group": true,
+    "oversized_html_over_12_mib": true
+  },
+  "isolation_dimensions": [
+    "html_sha256"
+  ],
+  "chronology": {
+    "strict_forward": true,
+    "partitions": [
+      "train",
+      "selection",
+      "calibration"
+    ],
+    "target_record_fractions": {
+      "train": 0.6,
+      "selection": 0.2,
+      "calibration": 0.2
+    },
+    "candidate_quantile_grid": {
+      "first_cutoff_min": 0.5,
+      "first_cutoff_max": 0.7,
+      "first_cutoff_step": 0.01,
+      "second_cutoff_min": 0.75,
+      "second_cutoff_max": 0.9,
+      "second_cutoff_step": 0.01
+    }
+  },
+  "planning_floors": {
+    "selection": {
+      "legitimate": 1200,
+      "phishing": 1000
+    },
+    "calibration": {
+      "legitimate": 1200,
+      "phishing": 1000
+    }
+  },
+  "planning_floor_interpretation": "These are conservative development-planning floors, not deployment authorization. They mirror the Stage-C protocol's recommended final-holdout class scale so that selection/calibration partitions are not trivially small."
+}
