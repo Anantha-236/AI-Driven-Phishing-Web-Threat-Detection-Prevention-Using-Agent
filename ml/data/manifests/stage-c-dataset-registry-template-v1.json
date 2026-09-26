@@ -1,0 +1,13 @@
+{
+  "schema_version": "stage-c-dataset-registry-1",
+  "stage": "C",
+  "research_only": true,
+  "deployment_authorized": false,
+  "development_datasets": [],
+  "final_holdout": null,
+  "notes": [
+    "Populate runtime registration only after dataset provenance and licenses are reviewed.",
+    "Each entry must point to a stage-c-dataset-identity-index-1 JSON file under the repository root.",
+    "Do not register the consumed Stage-B final test as Stage-C data."
+  ]
+}
