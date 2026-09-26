@@ -124,13 +124,15 @@ def test_module_has_no_training_dependency_or_final_dataset_reference():
     assert "fmbs4kp9wz" not in src
 
 
-def test_compatibility_plan_never_persists_source_url_or_brand():
+def test_memory_plan_never_persists_source_url_brand_or_disk_path():
     batch = {
         "batch_id": "batch-1",
         "rows": [r("s1", "a" * 64)],
     }
-    plan = mod._compatibility_plan(batch, {"s1": "html/s1.html"}, wait_ms=250)
+    plan = mod._memory_plan(batch, wait_ms=250)
     item = plan["items"][0]
-    assert item["brand_group"] is None
+    assert set(item) == {"sample_id", "ground_truth", "artifact_sha256", "wait_ms"}
     assert "url" not in item
-    assert item["observed_at"] == mod.REPLAY_ADAPTER_TIME_SENTINEL
+    assert "brand_group" not in item
+    assert "html_path" not in item
+

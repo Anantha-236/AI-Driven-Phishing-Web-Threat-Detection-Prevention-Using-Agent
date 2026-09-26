@@ -10,6 +10,7 @@ It does not train, select, calibrate, threshold, score, or authorize a model.
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+import base64
 from copy import deepcopy
 from io import BytesIO
 import hashlib
@@ -22,7 +23,7 @@ import tempfile
 from typing import Any, Callable, Iterable, Mapping
 import zipfile
 
-STATE_SCHEMA = "stage-c-development-feature-extraction-state-1"
+STATE_SCHEMA = "stage-c-development-feature-extraction-state-2"
 CHECKPOINT_SCHEMA = "stage-c-development-feature-checkpoint-1"
 AUDIT_SCHEMA = "stage-c-development-feature-audit-1"
 READINESS_SCHEMA = "stage-c-development-feature-readiness-1"
@@ -525,7 +526,7 @@ def _git_provenance(repo_root: Path) -> dict[str, str]:
         ).stdout.strip()
         if len(head) != 40:
             raise StageCFeatureExtractionError("invalid Git HEAD identity")
-        for relative in committed_paths[:2]:
+        for relative in committed_paths[:3]:
             subprocess.run(
                 ["git", "cat-file", "-e", f"HEAD:{relative}"], cwd=repo_root,
                 capture_output=True, check=True,
@@ -554,7 +555,7 @@ def _state_payload(
 ) -> dict[str, Any]:
     if type(wait_ms) is not int or not 250 <= wait_ms <= 10000:
         raise StageCFeatureExtractionError("wait_ms must be between 250 and 10000")
-    collector = repo_root / "scripts" / "stage-b-collect-archive-replay.mjs"
+    collector = repo_root / "scripts" / "stage-c-collect-memory-replay.mjs"
     required_dist = [dist / "manifest.json", dist / "collector.js", dist / "service-worker.js"]
     if not collector.is_file():
         raise StageCFeatureExtractionError("existing archive replay collector not found")
@@ -596,9 +597,9 @@ def _state_payload(
             "batch_size": batch_size,
             "wait_ms": wait_ms,
             "replay_each_authorized_sample_exactly_once": True,
-            "duplicate_artifacts_never_share_one_compatibility_plan": True,
-            "compatibility_observed_at_is_sentinel_not_source_evidence": True,
-            "compatibility_time_sentinel": REPLAY_ADAPTER_TIME_SENTINEL,
+            "duplicate_artifacts_never_share_one_replay_batch": True,
+            "memory_replay_transport": "STDIN_NDJSON_BASE64",
+            "raw_html_materialized_to_disk": False,
             "git_head": git_provenance["git_head"],
             "task10_module_sha256": git_provenance["task10_module_sha256"],
             "task10_cli_sha256": git_provenance["task10_cli_sha256"],
@@ -618,107 +619,134 @@ def _state_payload(
     return state
 
 
-def _compatibility_plan(batch: Mapping[str, Any], materialized: Mapping[str, str], *, wait_ms: int) -> dict[str, Any]:
-    items = []
-    for row in batch["rows"]:
-        sid = str(row["sample_id"])
-        items.append({
-            "sample_id": sid,
-            "html_path": materialized[sid],
-            "ground_truth": int(row["label"]),
-            "observed_at": REPLAY_ADAPTER_TIME_SENTINEL,
-            "artifact_sha256": str(row["html_sha256"]),
-            "domain_group": "STAGE_C_DEVELOPMENT_REPLAY_ADAPTER",
-            "brand_group": None,
-            "source_group": REPLAY_SOURCE_GROUP,
-            "wait_ms": wait_ms,
-        })
+def _memory_plan(batch: Mapping[str, Any], *, wait_ms: int) -> dict[str, Any]:
     return {
-        "schema_version": "stage-b-archive-replay-plan-1",
+        "schema_version": "stage-c-memory-replay-plan-1",
         "plan_id": f"stage-c-task10-{batch['batch_id']}",
-        "created_at": REPLAY_ADAPTER_TIME_SENTINEL,
-        "dataset": {
-            "dataset_id": "mendeley-phishing-websites-2021-v1",
-            "provider": "Mendeley Data",
-            "source_reference": "10.17632/n96ncsr5g4.1",
-            "source_snapshot_sha256": EXPECTED_ARCHIVE_SHA256,
-            "independence_group": REPLAY_SOURCE_GROUP,
-            "license_reference": "CC BY 4.0",
-            "research_use_allowed": True,
-        },
-        "items": items,
+        "items": [
+            {
+                "sample_id": str(row["sample_id"]),
+                "ground_truth": int(row["label"]),
+                "artifact_sha256": str(row["html_sha256"]),
+                "wait_ms": wait_ms,
+            }
+            for row in batch["rows"]
+        ],
     }
-
-
-def _materialize_batch(
-    nested: zipfile.ZipFile, batch: Mapping[str, Any], root: Path
-) -> dict[str, str]:
-    html_root = root / "html"
-    html_root.mkdir(parents=True, exist_ok=True)
-    materialized: dict[str, str] = {}
-    for row in batch["rows"]:
-        sid = str(row["sample_id"])
-        member = str(row["member_name"])
-        try:
-            info = nested.getinfo(member)
-        except KeyError as exc:
-            raise StageCFeatureExtractionError(f"nested HTML member missing for {sid}: {member}") from exc
-        if info.is_dir() or int(info.file_size) != int(row["html_size_bytes"]):
-            raise StageCFeatureExtractionError(f"nested HTML size/type mismatch for {sid}")
-        payload = nested.read(info)
-        if len(payload) != int(row["html_size_bytes"]):
-            raise StageCFeatureExtractionError(f"materialized HTML size mismatch for {sid}")
-        digest = hashlib.sha256(payload).hexdigest()
-        if digest != row["html_sha256"]:
-            raise StageCFeatureExtractionError(f"materialized HTML SHA-256 mismatch for {sid}")
-        filename = sid.replace(":", "_") + ".html"
-        target = html_root / filename
-        target.write_bytes(payload)
-        materialized[sid] = PurePosixPath("html", filename).as_posix()
-    return materialized
 
 
 def _run_collector(
     *, repo_root: Path, dist: Path, batch: Mapping[str, Any], nested: zipfile.ZipFile,
     wait_ms: int, timeout_seconds: int,
 ) -> dict[str, Any]:
-    collector = repo_root / "scripts" / "stage-b-collect-archive-replay.mjs"
-    with tempfile.TemporaryDirectory(prefix="stage-c-task10-") as temp_name:
+    collector = repo_root / "scripts" / "stage-c-collect-memory-replay.mjs"
+    with tempfile.TemporaryDirectory(prefix="stage-c-task10-meta-") as temp_name:
         root = Path(temp_name)
-        materialized = _materialize_batch(nested, batch, root)
         plan_path = root / "plan.json"
         output_path = root / "episodes.json"
         plan_path.write_text(
-            json.dumps(_compatibility_plan(batch, materialized, wait_ms=wait_ms), indent=2, sort_keys=True) + "\n",
+            json.dumps(_memory_plan(batch, wait_ms=wait_ms), indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         command = [
             "node", str(collector), "--plan", str(plan_path),
-            "--archive-root", str(root), "--output", str(output_path),
-            "--dist", str(dist),
+            "--output", str(output_path), "--dist", str(dist),
         ]
+        process: subprocess.Popen[str] | None = None
+        feeder_error: Exception | None = None
         try:
-            completed = subprocess.run(
-                command, cwd=repo_root, capture_output=True, text=True,
-                encoding="utf-8", timeout=timeout_seconds,
+            process = subprocess.Popen(
+                command,
+                cwd=repo_root,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
             )
-        except (OSError, subprocess.TimeoutExpired) as exc:
+            if process.stdin is None:
+                raise StageCFeatureExtractionError("memory replay stdin pipe unavailable")
+            try:
+                for row in batch["rows"]:
+                    sid = str(row["sample_id"])
+                    member = str(row["member_name"])
+                    try:
+                        info = nested.getinfo(member)
+                    except KeyError as exc:
+                        raise StageCFeatureExtractionError(
+                            f"nested HTML member missing for {sid}: {member}"
+                        ) from exc
+                    if info.is_dir() or int(info.file_size) != int(row["html_size_bytes"]):
+                        raise StageCFeatureExtractionError(
+                            f"nested HTML size/type mismatch for {sid}"
+                        )
+                    payload = nested.read(info)
+                    if len(payload) != int(row["html_size_bytes"]):
+                        raise StageCFeatureExtractionError(
+                            f"in-memory HTML size mismatch for {sid}"
+                        )
+                    digest = hashlib.sha256(payload).hexdigest()
+                    if digest != row["html_sha256"]:
+                        raise StageCFeatureExtractionError(
+                            f"in-memory HTML SHA-256 mismatch for {sid}"
+                        )
+                    envelope = {
+                        "sample_id": sid,
+                        "html_base64": base64.b64encode(payload).decode("ascii"),
+                    }
+                    process.stdin.write(
+                        json.dumps(envelope, separators=(",", ":")) + "\n"
+                    )
+                    process.stdin.flush()
+                    del payload, envelope
+            except (BrokenPipeError, OSError) as exc:
+                feeder_error = exc
+            finally:
+                try:
+                    process.stdin.close()
+                except OSError:
+                    pass
+                process.stdin = None
+
+            try:
+                stdout, stderr = process.communicate(timeout=timeout_seconds)
+            except subprocess.TimeoutExpired as exc:
+                process.kill()
+                stdout, stderr = process.communicate()
+                raise StageCFeatureExtractionError(
+                    f"memory browser replay timed out for {batch['batch_id']}"
+                ) from exc
+        except StageCFeatureExtractionError:
+            if process is not None and process.poll() is None:
+                process.kill()
+                process.communicate()
+            raise
+        except OSError as exc:
+            if process is not None and process.poll() is None:
+                process.kill()
+                process.communicate()
             raise StageCFeatureExtractionError(
-                f"browser replay failed to execute for {batch['batch_id']}: {exc}"
+                f"memory browser replay failed to execute for {batch['batch_id']}: {exc}"
             ) from exc
-        if completed.returncode != 0:
-            details = (completed.stderr or completed.stdout or "collector failed").strip()
+
+        if process is None:
+            raise StageCFeatureExtractionError("memory browser replay process unavailable")
+        if feeder_error is not None or process.returncode != 0:
+            details = (stderr or stdout or str(feeder_error) or "collector failed").strip()
             raise StageCFeatureExtractionError(
-                f"browser replay failed for {batch['batch_id']}: {details[-4000:]}"
+                f"memory browser replay failed for {batch['batch_id']}: {details[-4000:]}"
             )
         episodes = load_json(output_path)
+
     if episodes.get("schema_version") != "stage-b-event-episodes-1":
         raise StageCFeatureExtractionError("replay episode schema changed")
-    if episodes.get("collector_version") != "stage-b-archive-replay-1":
-        raise StageCFeatureExtractionError("replay collector version changed")
+    if episodes.get("collector_version") != "stage-c-memory-replay-1":
+        raise StageCFeatureExtractionError("memory replay collector version changed")
     failures = episodes.get("failures")
     if failures != []:
-        raise StageCFeatureExtractionError(f"replay batch contains failures: {batch['batch_id']}")
+        raise StageCFeatureExtractionError(
+            f"memory replay batch contains failures: {batch['batch_id']}"
+        )
     rows = episodes.get("episodes")
     if not isinstance(rows, list) or len(rows) != int(batch["sample_count"]):
         raise StageCFeatureExtractionError("replay episode count mismatch")
@@ -733,11 +761,15 @@ def _run_collector(
         "archived_local_files_only", "replay_origin_loopback_only",
         "page_scripts_disabled_by_csp", "form_submission_disabled_by_csp",
         "frames_and_objects_disabled_by_csp", "external_network_requests_aborted",
+        "raw_html_received_via_stdin_memory_stream",
+        "browser_response_cache_control_no_store",
     ):
         if safety.get(key) is not True:
             raise StageCFeatureExtractionError(f"replay safety guard failed: {key}")
     if safety.get("raw_html_persisted_in_episode_output") is not False:
         raise StageCFeatureExtractionError("replay unexpectedly persisted raw HTML")
+    if safety.get("raw_html_materialized_to_disk") is not False:
+        raise StageCFeatureExtractionError("replay materialized raw HTML to disk")
     source_hashes = episodes.get("source_hashes")
     if not isinstance(source_hashes, Mapping):
         raise StageCFeatureExtractionError("replay source hashes missing")
