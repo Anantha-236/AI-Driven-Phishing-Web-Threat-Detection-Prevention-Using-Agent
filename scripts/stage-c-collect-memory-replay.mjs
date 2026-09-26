@@ -9,7 +9,7 @@ import { createInterface } from 'node:readline';
 import { chromium } from '@playwright/test';
 
 const EPISODE_SCHEMA = 'stage-b-event-episodes-1';
-const COLLECTOR_VERSION = 'stage-c-memory-replay-2';
+const COLLECTOR_VERSION = 'stage-c-memory-replay-3';
 const PLAN_SCHEMA = 'stage-c-memory-replay-plan-1';
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 const ALLOWED_EVENT_FIELDS = new Set([
@@ -316,6 +316,23 @@ async function collectItem(context, worker, replay, item, html) {
     }
 
     externalRequestsBlocked++;
+
+    const isSecondaryMainFrameNavigation =
+      request.isNavigationRequest() &&
+      request.frame() === page.mainFrame();
+
+    if (isSecondaryMainFrameNavigation && ['GET', 'HEAD'].includes(method)) {
+      await route.fulfill({
+        status: 204,
+        headers: {
+          'cache-control': 'no-store, max-age=0',
+          'x-stage-c-secondary-navigation-blocked': '1',
+        },
+        body: '',
+      });
+      return;
+    }
+
     await route.abort('blockedbyclient');
   });
 
@@ -334,6 +351,13 @@ async function collectItem(context, worker, replay, item, html) {
 
     await page.waitForTimeout(item.wait_ms);
     await page.bringToFront();
+
+    if (page.url() !== target) {
+      throw new Error(
+        `replay document did not remain stable during observation; ` +
+        JSON.stringify(await replayDiagnostics(page, target)),
+      );
+    }
 
     const first = await readTabState(worker, page.url());
     if (!first?.tabId) {
@@ -511,6 +535,8 @@ async function main() {
       raw_html_received_via_stdin_memory_stream: true,
       raw_html_sent_over_os_loopback_socket: false,
       browser_document_body_injected_via_playwright_route_fulfill: true,
+      secondary_main_frame_navigation_policy: 'FULFILL_204_PRESERVE_DOCUMENT',
+      secondary_main_frame_navigation_external_network_allowed: false,
       browser_response_cache_control_no_store: true,
     },
     episodes,

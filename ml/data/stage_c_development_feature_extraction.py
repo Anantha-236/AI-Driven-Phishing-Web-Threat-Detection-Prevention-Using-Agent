@@ -23,7 +23,7 @@ import tempfile
 from typing import Any, Callable, Iterable, Mapping
 import zipfile
 
-STATE_SCHEMA = "stage-c-development-feature-extraction-state-3"
+STATE_SCHEMA = "stage-c-development-feature-extraction-state-4"
 CHECKPOINT_SCHEMA = "stage-c-development-feature-checkpoint-1"
 AUDIT_SCHEMA = "stage-c-development-feature-audit-1"
 READINESS_SCHEMA = "stage-c-development-feature-readiness-1"
@@ -601,6 +601,7 @@ def _state_payload(
             "memory_replay_transport": "STDIN_NDJSON_BASE64_TO_PLAYWRIGHT_ROUTE_FULFILL",
             "raw_html_sent_over_os_loopback_socket": False,
             "browser_document_body_source": "PLAYWRIGHT_ROUTE_FULFILL_MEMORY_BUFFER",
+            "secondary_main_frame_navigation_policy": "FULFILL_204_PRESERVE_DOCUMENT",
             "raw_html_materialized_to_disk": False,
             "git_head": git_provenance["git_head"],
             "task10_module_sha256": git_provenance["task10_module_sha256"],
@@ -742,7 +743,7 @@ def _run_collector(
 
     if episodes.get("schema_version") != "stage-b-event-episodes-1":
         raise StageCFeatureExtractionError("replay episode schema changed")
-    if episodes.get("collector_version") != "stage-c-memory-replay-2":
+    if episodes.get("collector_version") != "stage-c-memory-replay-3":
         raise StageCFeatureExtractionError("memory replay collector version changed")
     failures = episodes.get("failures")
     if failures != []:
@@ -775,6 +776,10 @@ def _run_collector(
         raise StageCFeatureExtractionError("replay materialized raw HTML to disk")
     if safety.get("raw_html_sent_over_os_loopback_socket") is not False:
         raise StageCFeatureExtractionError("replay sent raw HTML over OS loopback socket")
+    if safety.get("secondary_main_frame_navigation_policy") != "FULFILL_204_PRESERVE_DOCUMENT":
+        raise StageCFeatureExtractionError("replay secondary-navigation policy changed")
+    if safety.get("secondary_main_frame_navigation_external_network_allowed") is not False:
+        raise StageCFeatureExtractionError("replay allowed secondary main-frame external network")
     source_hashes = episodes.get("source_hashes")
     if not isinstance(source_hashes, Mapping):
         raise StageCFeatureExtractionError("replay source hashes missing")
