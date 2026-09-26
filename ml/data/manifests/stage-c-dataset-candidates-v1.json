@@ -1,0 +1,170 @@
+{
+  "schema_version": "stage-c-dataset-candidate-catalog-1",
+  "stage": "C",
+  "research_only": true,
+  "deployment_authorized": false,
+  "selection_policy": {
+    "development_requirements": [
+      "binary_labels",
+      "captured_html",
+      "license_reuse_allowed",
+      "at_least_381_legitimate",
+      "at_least_1_phishing",
+      "not_stage_b_source"
+    ],
+    "final_holdout_requirements": [
+      "binary_labels",
+      "captured_html",
+      "license_reuse_allowed",
+      "at_least_381_legitimate",
+      "at_least_1_phishing",
+      "source_independent_from_development",
+      "not_stage_b_source",
+      "collection_later_than_primary_development"
+    ],
+    "recommendation_policy": "Choose a primary development dataset and a distinct, later final-holdout dataset. Do not inspect final-holdout model scores or use it for feature, candidate, calibration, or threshold decisions."
+  },
+  "candidates": [
+    {
+      "candidate_id": "mendeley-phishing-websites-2021-v1",
+      "title": "Phishing Websites Dataset",
+      "role_eligibility": [
+        "DEVELOPMENT"
+      ],
+      "source_id": "mendeley-n96ncsr5g4-v1",
+      "publisher": "Mendeley Data",
+      "doi": "10.17632/n96ncsr5g4.1",
+      "landing_page": "https://data.mendeley.com/datasets/n96ncsr5g4/1",
+      "license": "CC BY 4.0",
+      "capture_format": [
+        "url",
+        "html"
+      ],
+      "labels": "binary_legitimate_phishing",
+      "class_counts": {
+        "legitimate": 50000,
+        "phishing": 30000
+      },
+      "indexed_instances": 80000,
+      "repository_file_instances_reported": 83275,
+      "collection_period": {
+        "phishing_start": "2020-12-01",
+        "phishing_end": "2021-10-31"
+      },
+      "source_notes": [
+        "Legitimate data includes Google-search-derived pages and Ebbu2017 data.",
+        "Phishing data includes PhishTank, OpenPhish, and PhishRepo.",
+        "Each indexed instance maps URL metadata to a captured HTML page.",
+        "Repository reports more physical instances than valid indexed records; acquisition must reconcile against index.sql."
+      ],
+      "qualification": "PRIMARY_DEVELOPMENT_RECOMMENDED"
+    },
+    {
+      "candidate_id": "compphish-v3-2026",
+      "title": "CompPhish",
+      "role_eligibility": [
+        "FINAL_HOLDOUT"
+      ],
+      "source_id": "mendeley-fmbs4kp9wz-v3",
+      "publisher": "Mendeley Data",
+      "doi": "10.17632/fmbs4kp9wz.3",
+      "landing_page": "https://data.mendeley.com/datasets/fmbs4kp9wz/3",
+      "license": "CC BY 4.0",
+      "capture_format": [
+        "url",
+        "html"
+      ],
+      "labels": "binary_legitimate_phishing",
+      "class_counts": {
+        "legitimate": 8154,
+        "phishing": 7204
+      },
+      "indexed_instances": 15358,
+      "collection_period": {
+        "start": "2024-09-01",
+        "end": "2025-08-31"
+      },
+      "source_notes": [
+        "Phishing URLs are reported as sourced from PhishTank and OpenPhish.",
+        "Legitimate URLs are reported as sourced from the DataForSEO Top-1000 list.",
+        "Raw URLs and corresponding HTML source code are provided.",
+        "This source must remain untouched by model/feature/threshold decisions until the Stage-C candidate is frozen."
+      ],
+      "qualification": "PRIMARY_FINAL_HOLDOUT_RECOMMENDED"
+    },
+    {
+      "candidate_id": "hf-phishing-snapshots-2024",
+      "title": "Phishing & Malware Website Snapshots",
+      "role_eligibility": [
+        "DEVELOPMENT_SUPPLEMENT_ONLY"
+      ],
+      "source_id": "huggingface-nyuuzyou-phishing-snapshots",
+      "publisher": "Hugging Face",
+      "landing_page": "https://huggingface.co/datasets/nyuuzyou/phishing-snapshots",
+      "license": "CC0-1.0",
+      "capture_format": [
+        "html",
+        "har",
+        "visible_text",
+        "parsed_features"
+      ],
+      "labels": "malicious_only_or_mixed_phishing_malware",
+      "class_counts": {
+        "legitimate": 0,
+        "phishing_or_malicious": 136414
+      },
+      "collection_period": {
+        "start": "2024-07-24",
+        "end": "2024-08-15"
+      },
+      "source_notes": [
+        "Useful only as later supplemental malicious-page development data.",
+        "Not suitable as the final holdout because it has no legitimate class.",
+        "Do not add this source before checking overlap with the selected final-holdout source."
+      ],
+      "qualification": "OPTIONAL_DEVELOPMENT_SUPPLEMENT"
+    },
+    {
+      "candidate_id": "phishark-2026",
+      "title": "PhiShark2026",
+      "role_eligibility": [
+        "FINAL_HOLDOUT_ALTERNATIVE"
+      ],
+      "source_id": "phishark2026",
+      "publisher": "PhiShark / research release",
+      "landing_page": "https://phishark2026dataset.com/",
+      "license": "REVIEW_REQUIRED",
+      "capture_format": [
+        "html_when_available",
+        "screenshot",
+        "raw_technical_evidence"
+      ],
+      "labels": "binary_benign_phishing",
+      "class_counts": {
+        "legitimate_or_benign": 27993,
+        "phishing": 25598
+      },
+      "collection_period": {
+        "start": "2026-04-01",
+        "end": "2026-07-31"
+      },
+      "source_notes": [
+        "Current public site describes restricted access for the large archive.",
+        "Use only after access and dataset-specific license/reuse terms are confirmed.",
+        "Strong alternative because it preserves raw evidence and is temporally recent."
+      ],
+      "qualification": "ALTERNATIVE_REQUIRES_ACCESS_AND_LICENSE_REVIEW"
+    }
+  ],
+  "recommended_pair": {
+    "development_candidate_id": "mendeley-phishing-websites-2021-v1",
+    "final_holdout_candidate_id": "compphish-v3-2026",
+    "rationale": [
+      "Both provide captured HTML rather than URL-only features.",
+      "Both have explicit binary labels and sufficient class counts.",
+      "Both are CC BY 4.0 according to their repository records.",
+      "The final-holdout source is distinct and collected materially later than the primary development source.",
+      "The pair avoids using the already-consumed Zenodo 8041387 Stage-B source as Stage-C data."
+    ]
+  }
+}
