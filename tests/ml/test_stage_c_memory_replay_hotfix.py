@@ -19,7 +19,7 @@ def tiny_batch():
 
 
 def test_state_schema_bumped_for_memory_transport():
-    assert mod.STATE_SCHEMA == "stage-c-development-feature-extraction-state-4"
+    assert mod.STATE_SCHEMA == "stage-c-development-feature-extraction-state-5"
 
 
 def test_memory_plan_contains_no_disk_html_path():
@@ -47,7 +47,7 @@ def test_memory_collector_declares_closed_safety_policy():
     root = Path(mod.__file__).resolve().parents[2]
     path = root / "scripts" / "stage-c-collect-memory-replay.mjs"
     source = path.read_text(encoding="utf-8")
-    assert "stage-c-memory-replay-3" in source
+    assert "stage-c-memory-replay-4" in source
     assert "html_base64" in source
     assert "raw_html_materialized_to_disk: false" in source
     assert "raw_html_received_via_stdin_memory_stream: true" in source
@@ -108,7 +108,7 @@ def test_secondary_main_frame_navigation_preserves_replay_document():
     assert "request.frame() === page.mainFrame()" in source
     assert "status: 204" in source
     assert "x-stage-c-secondary-navigation-blocked" in source
-    assert "FULFILL_204_PRESERVE_DOCUMENT" in source
+    assert "FULFILL_204_AFTER_SINGLE_INITIAL_FULFILL" in source
     assert "secondary_main_frame_navigation_external_network_allowed: false" in source
 
 
@@ -116,6 +116,30 @@ def test_navigation_preservation_policy_is_frozen_into_state():
     source = Path(mod.__file__).read_text(encoding="utf-8")
     assert (
         '"secondary_main_frame_navigation_policy": '
-        '"FULFILL_204_PRESERVE_DOCUMENT"'
+        '"FULFILL_204_AFTER_SINGLE_INITIAL_FULFILL"'
     ) in source
-    assert "stage-c-memory-replay-3" in source
+    assert '"repeated_controlled_url_reload_refulfilled": False' in source
+    assert "stage-c-memory-replay-4" in source
+
+
+def test_initial_replay_document_is_fulfilled_exactly_once():
+    root = Path(mod.__file__).resolve().parents[2]
+    source = (root / "scripts" / "stage-c-collect-memory-replay.mjs").read_text(
+        encoding="utf-8"
+    )
+    assert "let initialDocumentFulfilled = false;" in source
+    assert "!initialDocumentFulfilled" in source
+    assert "initialDocumentFulfilled = true;" in source
+    assert "isMainFrameNavigation" in source
+    assert "repeated_controlled_url_reload_refulfilled: false" in source
+
+
+def test_repeated_same_url_navigation_falls_through_to_204_guard():
+    root = Path(mod.__file__).resolve().parents[2]
+    source = (root / "scripts" / "stage-c-collect-memory-replay.mjs").read_text(
+        encoding="utf-8"
+    )
+    initial = source.index("!initialDocumentFulfilled")
+    secondary = source.index("if (isMainFrameNavigation && ['GET', 'HEAD'].includes(method))")
+    assert initial < secondary
+    assert "status: 204" in source[secondary:secondary + 600]

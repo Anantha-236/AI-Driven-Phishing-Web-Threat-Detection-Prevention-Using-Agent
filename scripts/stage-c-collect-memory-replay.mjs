@@ -9,7 +9,7 @@ import { createInterface } from 'node:readline';
 import { chromium } from '@playwright/test';
 
 const EPISODE_SCHEMA = 'stage-b-event-episodes-1';
-const COLLECTOR_VERSION = 'stage-c-memory-replay-3';
+const COLLECTOR_VERSION = 'stage-c-memory-replay-4';
 const PLAN_SCHEMA = 'stage-c-memory-replay-plan-1';
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 const ALLOWED_EVENT_FIELDS = new Set([
@@ -296,6 +296,7 @@ async function collectItem(context, worker, replay, item, html) {
   const targetPath = `/sample/${token}/`;
   const target = `http://127.0.0.1:${replay.port}${targetPath}`;
   let externalRequestsBlocked = 0;
+  let initialDocumentFulfilled = false;
 
   await page.route('**/*', async route => {
     const request = route.request();
@@ -305,8 +306,17 @@ async function collectItem(context, worker, replay, item, html) {
       LOOPBACK_HOSTS.has(url.hostname) &&
       Number(url.port) === replay.port &&
       url.pathname === targetPath;
+    const isMainFrameNavigation =
+      request.isNavigationRequest() &&
+      request.frame() === page.mainFrame();
 
-    if (isReplay && ['GET', 'HEAD'].includes(method)) {
+    if (
+      !initialDocumentFulfilled &&
+      isReplay &&
+      isMainFrameNavigation &&
+      ['GET', 'HEAD'].includes(method)
+    ) {
+      initialDocumentFulfilled = true;
       await route.fulfill({
         status: 200,
         headers: replayHeaders(true),
@@ -317,11 +327,7 @@ async function collectItem(context, worker, replay, item, html) {
 
     externalRequestsBlocked++;
 
-    const isSecondaryMainFrameNavigation =
-      request.isNavigationRequest() &&
-      request.frame() === page.mainFrame();
-
-    if (isSecondaryMainFrameNavigation && ['GET', 'HEAD'].includes(method)) {
+    if (isMainFrameNavigation && ['GET', 'HEAD'].includes(method)) {
       await route.fulfill({
         status: 204,
         headers: {
@@ -535,8 +541,9 @@ async function main() {
       raw_html_received_via_stdin_memory_stream: true,
       raw_html_sent_over_os_loopback_socket: false,
       browser_document_body_injected_via_playwright_route_fulfill: true,
-      secondary_main_frame_navigation_policy: 'FULFILL_204_PRESERVE_DOCUMENT',
+      secondary_main_frame_navigation_policy: 'FULFILL_204_AFTER_SINGLE_INITIAL_FULFILL',
       secondary_main_frame_navigation_external_network_allowed: false,
+      repeated_controlled_url_reload_refulfilled: false,
       browser_response_cache_control_no_store: true,
     },
     episodes,
