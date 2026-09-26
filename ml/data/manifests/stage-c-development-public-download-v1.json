@@ -1,0 +1,70 @@
+{
+  "schema_version": "stage-c-public-download-spec-1",
+  "stage": "C",
+  "role": "DEVELOPMENT",
+  "source_id": "mendeley-n96ncsr5g4-v1",
+  "doi": "10.17632/n96ncsr5g4.1",
+  "version": 1,
+  "license": "CC BY 4.0",
+  "landing_page": "https://data.mendeley.com/datasets/n96ncsr5g4/1",
+  "expected_archive": {
+    "filename": "n96ncsr5g4-1.zip",
+    "size_bytes": 1858572477,
+    "sha256": "20dc563784f08c31e03665390abb542b325b1120432437bd70a774449f9415c0",
+    "expected_member_count": 9
+  },
+  "expected_members": [
+    {
+      "name": "n96ncsr5g4-1/index.sql",
+      "size_bytes": 10211200,
+      "kind": "INDEX_SQL"
+    },
+    {
+      "name": "n96ncsr5g4-1/dataset/dataset_part_1.zip",
+      "size_bytes": 223328365,
+      "kind": "NESTED_ZIP"
+    },
+    {
+      "name": "n96ncsr5g4-1/dataset/dataset_part_2.zip",
+      "size_bytes": 218755365,
+      "kind": "NESTED_ZIP"
+    },
+    {
+      "name": "n96ncsr5g4-1/dataset/dataset_part_3.zip",
+      "size_bytes": 233706339,
+      "kind": "NESTED_ZIP"
+    },
+    {
+      "name": "n96ncsr5g4-1/dataset/dataset_part_4.zip",
+      "size_bytes": 223418458,
+      "kind": "NESTED_ZIP"
+    },
+    {
+      "name": "n96ncsr5g4-1/dataset/dataset_part_5.zip",
+      "size_bytes": 223852399,
+      "kind": "NESTED_ZIP"
+    },
+    {
+      "name": "n96ncsr5g4-1/dataset/dataset_part_6.zip",
+      "size_bytes": 226938516,
+      "kind": "NESTED_ZIP"
+    },
+    {
+      "name": "n96ncsr5g4-1/dataset/dataset_part_7.zip",
+      "size_bytes": 218968298,
+      "kind": "NESTED_ZIP"
+    },
+    {
+      "name": "n96ncsr5g4-1/dataset/dataset_part_8.zip",
+      "size_bytes": 298077229,
+      "kind": "NESTED_ZIP"
+    }
+  ],
+  "guards": {
+    "research_only": true,
+    "deployment_authorized": false,
+    "model_training_authorized": false,
+    "extraction_authorized": false,
+    "final_holdout_touched": false
+  }
+}
