@@ -19,7 +19,7 @@ def tiny_batch():
 
 
 def test_state_schema_bumped_for_memory_transport():
-    assert mod.STATE_SCHEMA == "stage-c-development-feature-extraction-state-2"
+    assert mod.STATE_SCHEMA == "stage-c-development-feature-extraction-state-3"
 
 
 def test_memory_plan_contains_no_disk_html_path():
@@ -47,11 +47,16 @@ def test_memory_collector_declares_closed_safety_policy():
     root = Path(mod.__file__).resolve().parents[2]
     path = root / "scripts" / "stage-c-collect-memory-replay.mjs"
     source = path.read_text(encoding="utf-8")
-    assert "stage-c-memory-replay-1" in source
+    assert "stage-c-memory-replay-2" in source
     assert "html_base64" in source
     assert "raw_html_materialized_to_disk: false" in source
     assert "raw_html_received_via_stdin_memory_stream: true" in source
     assert "browser_response_cache_control_no_store: true" in source
+    assert "browser_document_body_injected_via_playwright_route_fulfill: true" in source
+    assert "raw_html_sent_over_os_loopback_socket: false" in source
+    assert "route.fulfill" in source
+    assert "x-stage-c-memory-fulfill" in source
+    assert "response.end(active.html)" not in source
     assert "readFileSync(file)" not in source
 
 
@@ -78,3 +83,17 @@ def test_memory_transport_does_not_add_training_dependency():
     assert "sklearn" not in source
     assert "predict_proba" not in source
     assert ".fit(" not in source
+
+
+def test_task10_git_guard_binds_actual_memory_collector():
+    source = Path(mod.__file__).read_text(encoding="utf-8")
+    assert '"scripts/stage-c-collect-memory-replay.mjs",' in source
+    assert '"scripts/stage-b-collect-archive-replay.mjs",' not in source
+
+
+def test_route_fulfill_transport_is_bound_into_state():
+    source = Path(mod.__file__).read_text(encoding="utf-8")
+    assert '"memory_replay_transport": "STDIN_NDJSON_BASE64_TO_PLAYWRIGHT_ROUTE_FULFILL"' in source
+    assert '"raw_html_sent_over_os_loopback_socket": False' in source
+    assert '"browser_document_body_source": "PLAYWRIGHT_ROUTE_FULFILL_MEMORY_BUFFER"' in source
+

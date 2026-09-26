@@ -23,7 +23,7 @@ import tempfile
 from typing import Any, Callable, Iterable, Mapping
 import zipfile
 
-STATE_SCHEMA = "stage-c-development-feature-extraction-state-2"
+STATE_SCHEMA = "stage-c-development-feature-extraction-state-3"
 CHECKPOINT_SCHEMA = "stage-c-development-feature-checkpoint-1"
 AUDIT_SCHEMA = "stage-c-development-feature-audit-1"
 READINESS_SCHEMA = "stage-c-development-feature-readiness-1"
@@ -516,7 +516,7 @@ def _git_provenance(repo_root: Path) -> dict[str, str]:
     committed_paths = [
         "ml/data/stage_c_development_feature_extraction.py",
         "ml/data/extract_stage_c_development_features.py",
-        "scripts/stage-b-collect-archive-replay.mjs",
+        "scripts/stage-c-collect-memory-replay.mjs",
         "browser-extension/src/core/tsfeg.ts",
     ]
     try:
@@ -598,7 +598,9 @@ def _state_payload(
             "wait_ms": wait_ms,
             "replay_each_authorized_sample_exactly_once": True,
             "duplicate_artifacts_never_share_one_replay_batch": True,
-            "memory_replay_transport": "STDIN_NDJSON_BASE64",
+            "memory_replay_transport": "STDIN_NDJSON_BASE64_TO_PLAYWRIGHT_ROUTE_FULFILL",
+            "raw_html_sent_over_os_loopback_socket": False,
+            "browser_document_body_source": "PLAYWRIGHT_ROUTE_FULFILL_MEMORY_BUFFER",
             "raw_html_materialized_to_disk": False,
             "git_head": git_provenance["git_head"],
             "task10_module_sha256": git_provenance["task10_module_sha256"],
@@ -740,7 +742,7 @@ def _run_collector(
 
     if episodes.get("schema_version") != "stage-b-event-episodes-1":
         raise StageCFeatureExtractionError("replay episode schema changed")
-    if episodes.get("collector_version") != "stage-c-memory-replay-1":
+    if episodes.get("collector_version") != "stage-c-memory-replay-2":
         raise StageCFeatureExtractionError("memory replay collector version changed")
     failures = episodes.get("failures")
     if failures != []:
@@ -762,6 +764,7 @@ def _run_collector(
         "page_scripts_disabled_by_csp", "form_submission_disabled_by_csp",
         "frames_and_objects_disabled_by_csp", "external_network_requests_aborted",
         "raw_html_received_via_stdin_memory_stream",
+        "browser_document_body_injected_via_playwright_route_fulfill",
         "browser_response_cache_control_no_store",
     ):
         if safety.get(key) is not True:
@@ -770,6 +773,8 @@ def _run_collector(
         raise StageCFeatureExtractionError("replay unexpectedly persisted raw HTML")
     if safety.get("raw_html_materialized_to_disk") is not False:
         raise StageCFeatureExtractionError("replay materialized raw HTML to disk")
+    if safety.get("raw_html_sent_over_os_loopback_socket") is not False:
+        raise StageCFeatureExtractionError("replay sent raw HTML over OS loopback socket")
     source_hashes = episodes.get("source_hashes")
     if not isinstance(source_hashes, Mapping):
         raise StageCFeatureExtractionError("replay source hashes missing")

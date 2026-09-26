@@ -9,7 +9,7 @@ import { createInterface } from 'node:readline';
 import { chromium } from '@playwright/test';
 
 const EPISODE_SCHEMA = 'stage-b-event-episodes-1';
-const COLLECTOR_VERSION = 'stage-c-memory-replay-1';
+const COLLECTOR_VERSION = 'stage-c-memory-replay-2';
 const PLAN_SCHEMA = 'stage-c-memory-replay-plan-1';
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 const ALLOWED_EVENT_FIELDS = new Set([
@@ -113,6 +113,31 @@ function validatePlan(plan) {
   return plan;
 }
 
+
+function replayHeaders(fulfilled) {
+  return {
+    'content-type': 'text/html; charset=utf-8',
+    'x-content-type-options': 'nosniff',
+    'cache-control': 'no-store, max-age=0',
+    'pragma': 'no-cache',
+    'referrer-policy': 'no-referrer',
+    'x-stage-c-memory-fulfill': fulfilled ? '1' : '0',
+    'content-security-policy': [
+      "default-src 'none'",
+      "script-src 'none'",
+      "connect-src 'none'",
+      "frame-src 'none'",
+      "child-src 'none'",
+      "object-src 'none'",
+      "form-action 'none'",
+      "base-uri 'none'",
+      "img-src data: blob:",
+      "style-src 'unsafe-inline'",
+      "font-src data:",
+    ].join('; '),
+  };
+}
+
 async function startReplayServer(plan) {
   let active = null;
   const server = createServer((request, response) => {
@@ -124,35 +149,10 @@ async function startReplayServer(plan) {
         response.end('Not found');
         return;
       }
-      if (!['GET', 'HEAD'].includes(request.method || 'GET')) {
-        response.writeHead(405, { allow: 'GET, HEAD' });
-        response.end();
-        return;
-      }
-      response.setHeader('content-type', 'text/html; charset=utf-8');
-      response.setHeader('x-content-type-options', 'nosniff');
-      response.setHeader('cache-control', 'no-store, max-age=0');
-      response.setHeader('pragma', 'no-cache');
-      response.setHeader('referrer-policy', 'no-referrer');
-      response.setHeader(
-        'content-security-policy',
-        [
-          "default-src 'none'",
-          "script-src 'none'",
-          "connect-src 'none'",
-          "frame-src 'none'",
-          "child-src 'none'",
-          "object-src 'none'",
-          "form-action 'none'",
-          "base-uri 'none'",
-          "img-src data: blob:",
-          "style-src 'unsafe-inline'",
-          "font-src data:",
-        ].join('; ')
-      );
-      response.writeHead(200);
-      if (request.method !== 'HEAD') response.end(active.html);
-      else response.end();
+      // Fail closed. The real archived body must be delivered only through
+      // Playwright route.fulfill from the already SHA-verified RAM buffer.
+      response.writeHead(503, replayHeaders(false));
+      response.end('Stage C replay body is available only through in-process fulfillment.');
     } catch {
       response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
       response.end('Replay error');
@@ -171,16 +171,14 @@ async function startReplayServer(plan) {
   return {
     server,
     port: address.port,
-    activate(item, html) {
+    activate(item) {
       if (active) throw new Error('memory replay sample already active');
       active = {
         sample_id: item.sample_id,
         token: sha256Text(`${plan.plan_id}\0${item.sample_id}`).slice(0, 32),
-        html,
       };
     },
     deactivate() {
-      if (active?.html) active.html.fill(0);
       active = null;
     },
     tokenFor(sampleId) {
@@ -269,39 +267,99 @@ async function clearReplaySessionState(worker) {
   });
 }
 
-async function collectItem(context, worker, replay, item) {
+
+async function replayDiagnostics(page, target) {
+  let dom = null;
+  try {
+    dom = await page.evaluate(() => ({
+      readyState: document.readyState,
+      moduleLoaded: document.documentElement?.getAttribute('data-capstone-module-loaded') ?? null,
+      contentScriptStarted: document.documentElement?.getAttribute('data-capstone-content-script-started') ?? null,
+    }));
+  } catch (error) {
+    dom = { evaluationError: error instanceof Error ? error.message : String(error) };
+  }
+  return {
+    target,
+    pageUrl: page.url(),
+    dom,
+  };
+}
+
+async function collectItem(context, worker, replay, item, html) {
   const page = await context.newPage();
   page.on('dialog', dialog => void dialog.dismiss());
   page.on('download', download => void download.cancel());
   page.on('popup', popup => void popup.close());
 
+  const token = replay.tokenFor(item.sample_id);
+  const targetPath = `/sample/${token}/`;
+  const target = `http://127.0.0.1:${replay.port}${targetPath}`;
   let externalRequestsBlocked = 0;
+
   await page.route('**/*', async route => {
     const request = route.request();
     const url = new URL(request.url());
     const method = request.method().toUpperCase();
-    const isReplay = LOOPBACK_HOSTS.has(url.hostname) && Number(url.port) === replay.port;
-    if (!isReplay || !['GET', 'HEAD'].includes(method)) {
-      externalRequestsBlocked++;
-      await route.abort('blockedbyclient');
+    const isReplay =
+      LOOPBACK_HOSTS.has(url.hostname) &&
+      Number(url.port) === replay.port &&
+      url.pathname === targetPath;
+
+    if (isReplay && ['GET', 'HEAD'].includes(method)) {
+      await route.fulfill({
+        status: 200,
+        headers: replayHeaders(true),
+        body: method === 'HEAD' ? Buffer.alloc(0) : html,
+      });
       return;
     }
-    await route.continue();
+
+    externalRequestsBlocked++;
+    await route.abort('blockedbyclient');
   });
 
   try {
-    const token = replay.tokenFor(item.sample_id);
-    const target = `http://127.0.0.1:${replay.port}/sample/${token}/`;
-    await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+    const response = await page.goto(target, {
+      waitUntil: 'domcontentloaded',
+      timeout: 15_000,
+    });
+    const headers = response ? await response.allHeaders().catch(() => ({})) : {};
+    if (!response || response.status() !== 200 || headers['x-stage-c-memory-fulfill'] !== '1') {
+      throw new Error(
+        `in-process replay fulfillment was not used: ` +
+        JSON.stringify(await replayDiagnostics(page, target)),
+      );
+    }
+
     await page.waitForTimeout(item.wait_ms);
     await page.bringToFront();
 
     const first = await readTabState(worker, page.url());
-    if (!first?.tabId) throw new Error('unable to resolve replay browser tab');
-    await waitForQueueDrain(worker, first.tabId);
+    if (!first?.tabId) {
+      throw new Error(
+        `unable to resolve replay browser tab: ` +
+        JSON.stringify(await replayDiagnostics(page, target)),
+      );
+    }
+
+    try {
+      await waitForQueueDrain(worker, first.tabId);
+    } catch (error) {
+      const details = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `${details}; replay_diagnostics=` +
+        JSON.stringify(await replayDiagnostics(page, target)),
+      );
+    }
 
     const snapshot = await readTabState(worker, page.url());
-    if (!snapshot?.state) throw new Error('typed event recorder state unavailable');
+    if (!snapshot?.state) {
+      throw new Error(
+        `typed event recorder state unavailable; replay_diagnostics=` +
+        JSON.stringify(await replayDiagnostics(page, target)),
+      );
+    }
     const state = snapshot.state;
     const droppedEvents = Number(state.dropped || 0) + Number(state.content_dropped || 0);
     const deliveryErrors = Number(state.content_delivery_errors || 0);
@@ -399,8 +457,8 @@ async function main() {
       let html = null;
       try {
         html = decodeEnvelope(next.value, item);
-        replay.activate(item, html);
-        episodes.push(await collectItem(context, worker, replay, item));
+        replay.activate(item);
+        episodes.push(await collectItem(context, worker, replay, item, html));
       } catch (error) {
         console.error(`[Stage C memory replay] ${item.sample_id}:`, error);
         failures.push({
@@ -408,6 +466,10 @@ async function main() {
           code: 'MEMORY_REPLAY_FAILED',
           message: 'Replay failed; inspect local console output for details.',
         });
+        // A replay-readiness failure is an infrastructure failure, not a
+        // per-sample label/result. Abort immediately instead of spending the
+        // rest of the batch on the same broken browser state.
+        throw error;
       } finally {
         replay.deactivate();
         if (html) html.fill(0);
@@ -447,6 +509,8 @@ async function main() {
       target_urls_persisted: false,
       raw_html_materialized_to_disk: false,
       raw_html_received_via_stdin_memory_stream: true,
+      raw_html_sent_over_os_loopback_socket: false,
+      browser_document_body_injected_via_playwright_route_fulfill: true,
       browser_response_cache_control_no_store: true,
     },
     episodes,
