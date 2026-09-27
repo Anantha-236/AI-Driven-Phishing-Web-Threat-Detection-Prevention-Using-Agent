@@ -23,10 +23,10 @@ import tempfile
 from typing import Any, Callable, Iterable, Mapping
 import zipfile
 
-STATE_SCHEMA = "stage-c-development-feature-extraction-state-5"
-CHECKPOINT_SCHEMA = "stage-c-development-feature-checkpoint-1"
-AUDIT_SCHEMA = "stage-c-development-feature-audit-1"
-READINESS_SCHEMA = "stage-c-development-feature-readiness-1"
+STATE_SCHEMA = "stage-c-development-feature-extraction-state-6"
+CHECKPOINT_SCHEMA = "stage-c-development-feature-checkpoint-2"
+AUDIT_SCHEMA = "stage-c-development-feature-audit-2"
+READINESS_SCHEMA = "stage-c-development-feature-readiness-2"
 
 PARTITIONS = ("train", "selection", "calibration")
 EXPECTED_PARTITION_COUNTS = {
@@ -603,6 +603,8 @@ def _state_payload(
             "browser_document_body_source": "PLAYWRIGHT_ROUTE_FULFILL_MEMORY_BUFFER",
             "secondary_main_frame_navigation_policy": "FULFILL_204_AFTER_SINGLE_INITIAL_FULFILL",
             "repeated_controlled_url_reload_refulfilled": False,
+            "collection_loss_policy": "PRESERVE_PRODUCTION_TRUNCATION_AND_EXCLUDE_FROM_MODELING",
+            "incomplete_rows_modeling_candidate": False,
             "raw_html_materialized_to_disk": False,
             "git_head": git_provenance["git_head"],
             "task10_module_sha256": git_provenance["task10_module_sha256"],
@@ -744,7 +746,7 @@ def _run_collector(
 
     if episodes.get("schema_version") != "stage-b-event-episodes-1":
         raise StageCFeatureExtractionError("replay episode schema changed")
-    if episodes.get("collector_version") != "stage-c-memory-replay-4":
+    if episodes.get("collector_version") != "stage-c-memory-replay-5":
         raise StageCFeatureExtractionError("memory replay collector version changed")
     failures = episodes.get("failures")
     if failures != []:
@@ -783,6 +785,29 @@ def _run_collector(
         raise StageCFeatureExtractionError("replay allowed secondary main-frame external network")
     if safety.get("repeated_controlled_url_reload_refulfilled") is not False:
         raise StageCFeatureExtractionError("replay re-fulfilled a repeated controlled-URL reload")
+    if safety.get("collection_loss_policy") != "PRESERVE_PRODUCTION_TRUNCATION_AND_FLAG":
+        raise StageCFeatureExtractionError("replay collection-loss policy changed")
+    if safety.get("incomplete_rows_modeling_candidate") is not False:
+        raise StageCFeatureExtractionError("replay marked incomplete rows as modeling candidates")
+
+    for row in rows:
+        if not isinstance(row, Mapping):
+            raise StageCFeatureExtractionError("replay episode row invalid")
+        incomplete = row.get("collection_incomplete")
+        dropped = row.get("dropped_events")
+        delivery = row.get("delivery_errors")
+        history = row.get("history_truncated")
+        if type(incomplete) is not bool or type(history) is not bool:
+            raise StageCFeatureExtractionError("replay collection-quality flags invalid")
+        if type(dropped) is not int or dropped < 0:
+            raise StageCFeatureExtractionError("replay dropped-event count invalid")
+        if type(delivery) is not int or delivery < 0:
+            raise StageCFeatureExtractionError("replay delivery-error count invalid")
+        if incomplete is not (dropped > 0 or history):
+            raise StageCFeatureExtractionError(
+                "replay collection-incomplete flag does not match loss metadata"
+            )
+
     source_hashes = episodes.get("source_hashes")
     if not isinstance(source_hashes, Mapping):
         raise StageCFeatureExtractionError("replay source hashes missing")
@@ -793,7 +818,7 @@ def _run_collector(
 
 def _extract_vectors(
     episodes: Mapping[str, Any], *, repo_root: Path
-) -> dict[str, list[float | int]]:
+) -> dict[str, dict[str, Any]]:
     tsfeg = (repo_root / "browser-extension" / "src" / "core" / "tsfeg.ts").resolve()
     source = r"""
 import fs from 'node:fs';
@@ -801,8 +826,16 @@ import { pathToFileURL } from 'node:url';
 const core = await import(pathToFileURL(process.argv[1]).href);
 const input = JSON.parse(fs.readFileSync(0, 'utf8'));
 const rows = input.map(row => {
-  const out = core.buildContextFeatures(row.events, false);
-  return { sample_id: row.sample_id, vector: out.vector };
+  const incomplete = row.collection_incomplete === true;
+  const out = core.buildContextFeatures(row.events, incomplete);
+  return {
+    sample_id: row.sample_id,
+    vector: out.vector,
+    collection_incomplete: incomplete,
+    dropped_events: row.dropped_events,
+    delivery_errors: row.delivery_errors,
+    history_truncated: row.history_truncated === true,
+  };
 });
 process.stdout.write(JSON.stringify({
   feature_version: core.CONTEXT_FEATURE_VERSION,
@@ -828,7 +861,7 @@ process.stdout.write(JSON.stringify({
         raise StageCFeatureExtractionError("production feature contract changed during extraction")
     if canonical_hash({"feature_version": output["feature_version"], "feature_names": output["feature_names"]}) != EXPECTED_FEATURE_CONTRACT_SHA256:
         raise StageCFeatureExtractionError("production feature contract hash changed during extraction")
-    result: dict[str, list[float | int]] = {}
+    result: dict[str, dict[str, Any]] = {}
     rows = output.get("rows")
     if not isinstance(rows, list):
         raise StageCFeatureExtractionError("production extractor rows missing")
@@ -843,22 +876,48 @@ process.stdout.write(JSON.stringify({
             raise StageCFeatureExtractionError(f"production feature vector shape mismatch: {sid}")
         if any(type(value) not in (int, float) or not math.isfinite(value) for value in vector):
             raise StageCFeatureExtractionError(f"non-finite production feature vector: {sid}")
-        result[sid] = list(vector)
+        incomplete = row.get("collection_incomplete")
+        dropped = row.get("dropped_events")
+        delivery = row.get("delivery_errors")
+        history = row.get("history_truncated")
+        if type(incomplete) is not bool or type(history) is not bool:
+            raise StageCFeatureExtractionError(f"production collection flags invalid: {sid}")
+        if type(dropped) is not int or dropped < 0:
+            raise StageCFeatureExtractionError(f"production dropped-event count invalid: {sid}")
+        if type(delivery) is not int or delivery < 0:
+            raise StageCFeatureExtractionError(f"production delivery-error count invalid: {sid}")
+        if incomplete is not (dropped > 0 or history):
+            raise StageCFeatureExtractionError(
+                f"production collection-incomplete flag mismatch: {sid}"
+            )
+        result[sid] = {
+            "feature_vector": list(vector),
+            "collection_incomplete": incomplete,
+            "dropped_events": dropped,
+            "delivery_errors": delivery,
+            "history_truncated": history,
+        }
     return result
 
 
-def _render_checkpoint_rows(batch: Mapping[str, Any], vectors: Mapping[str, list[float | int]]) -> bytes:
+def _render_checkpoint_rows(
+    batch: Mapping[str, Any], vectors: Mapping[str, Mapping[str, Any]]
+) -> bytes:
     lines: list[bytes] = []
     for row in sorted(batch["rows"], key=lambda x: str(x["sample_id"])):
         sid = str(row["sample_id"])
-        vector = vectors.get(sid)
-        if vector is None:
+        extracted = vectors.get(sid)
+        if extracted is None:
             raise StageCFeatureExtractionError(f"feature vector missing for replayed sample: {sid}")
         feature_row = {
             "sample_id": sid,
             "partition": str(row["partition"]),
             "label": int(row["label"]),
-            "feature_vector": vector,
+            "feature_vector": list(extracted["feature_vector"]),
+            "collection_incomplete": bool(extracted["collection_incomplete"]),
+            "dropped_events": int(extracted["dropped_events"]),
+            "delivery_errors": int(extracted["delivery_errors"]),
+            "history_truncated": bool(extracted["history_truncated"]),
         }
         lines.append(canonical_bytes(feature_row) + b"\n")
     return b"".join(lines)
@@ -975,7 +1034,12 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def _validate_feature_row(row: Mapping[str, Any]) -> None:
-    if set(row) != {"sample_id", "partition", "label", "feature_vector"}:
+    expected_fields = {
+        "sample_id", "partition", "label", "feature_vector",
+        "collection_incomplete", "dropped_events", "delivery_errors",
+        "history_truncated",
+    }
+    if set(row) != expected_fields:
         raise StageCFeatureExtractionError("feature row contains prohibited or unexpected fields")
     if not isinstance(row.get("sample_id"), str) or not row.get("sample_id"):
         raise StageCFeatureExtractionError("feature row sample_id invalid")
@@ -988,6 +1052,19 @@ def _validate_feature_row(row: Mapping[str, Any]) -> None:
         raise StageCFeatureExtractionError("feature row vector shape invalid")
     if any(type(value) not in (int, float) or not math.isfinite(value) for value in vector):
         raise StageCFeatureExtractionError("feature row contains NaN/Infinity/non-numeric value")
+    if type(row.get("collection_incomplete")) is not bool:
+        raise StageCFeatureExtractionError("feature row collection_incomplete invalid")
+    if type(row.get("history_truncated")) is not bool:
+        raise StageCFeatureExtractionError("feature row history_truncated invalid")
+    for key in ("dropped_events", "delivery_errors"):
+        if type(row.get(key)) is not int or int(row[key]) < 0:
+            raise StageCFeatureExtractionError(f"feature row {key} invalid")
+    if row["collection_incomplete"] is not (
+        row["dropped_events"] > 0 or row["history_truncated"]
+    ):
+        raise StageCFeatureExtractionError(
+            "feature row collection-incomplete flag does not match loss metadata"
+        )
 
 
 def _finalize(
@@ -1041,6 +1118,42 @@ def _finalize(
     if reproduced_counts != EXPECTED_PARTITION_COUNTS:
         raise StageCFeatureExtractionError("final feature partition counts changed")
 
+    incomplete_ids = sorted(
+        sid for sid, row in checkpoint_rows.items()
+        if row["collection_incomplete"] is True
+    )
+    complete_ids = sorted(
+        sid for sid, row in checkpoint_rows.items()
+        if row["collection_incomplete"] is False
+    )
+    incomplete_sample_set_sha256 = canonical_hash(incomplete_ids)
+    modeling_candidate_sample_set_sha256 = canonical_hash(complete_ids)
+
+    incomplete_counts: dict[str, Counter[int]] = {
+        part: Counter() for part in PARTITIONS
+    }
+    complete_counts: dict[str, Counter[int]] = {
+        part: Counter() for part in PARTITIONS
+    }
+    for row in checkpoint_rows.values():
+        target = incomplete_counts if row["collection_incomplete"] else complete_counts
+        target[str(row["partition"])][int(row["label"])] += 1
+
+    def rendered_counts(
+        source_counts: Mapping[str, Counter[int]]
+    ) -> dict[str, dict[str, int]]:
+        return {
+            part: {
+                "total": source_counts[part][0] + source_counts[part][1],
+                "legitimate": source_counts[part][0],
+                "phishing": source_counts[part][1],
+            }
+            for part in PARTITIONS
+        }
+
+    collection_incomplete_partition_counts = rendered_counts(incomplete_counts)
+    modeling_candidate_partition_counts = rendered_counts(complete_counts)
+
     final_path = output_root / "development-features.jsonl"
     temp_path = final_path.with_name(f".{final_path.name}.assemble-{os.getpid()}")
     final_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1062,6 +1175,10 @@ def _finalize(
             "partition": checkpoint_rows[sid]["partition"],
             "label": checkpoint_rows[sid]["label"],
             "feature_vector": checkpoint_rows[sid]["feature_vector"],
+            "collection_incomplete": checkpoint_rows[sid]["collection_incomplete"],
+            "dropped_events": checkpoint_rows[sid]["dropped_events"],
+            "delivery_errors": checkpoint_rows[sid]["delivery_errors"],
+            "history_truncated": checkpoint_rows[sid]["history_truncated"],
         }
         for sid in sorted(checkpoint_rows)
     ])
@@ -1074,6 +1191,8 @@ def _finalize(
         "SAMPLE_ID_JOIN_COVERAGE": True,
         "LABEL_ALIGNMENT": True,
         "PARTITION_IDENTITY_REPRODUCTION": True,
+        "COLLECTION_LOSS_EXPLICITLY_FLAGGED": True,
+        "INCOMPLETE_ROWS_EXCLUDED_FROM_MODELING_CANDIDATES": True,
         "FEATURE_DATASET_HASH_FREEZE": True,
     }
     audit = {
@@ -1103,11 +1222,21 @@ def _finalize(
         "extractor_source_sha256": EXPECTED_EXTRACTOR_SOURCE_SHA256,
         "partition_counts": reproduced_counts,
         "total_rows": len(checkpoint_rows),
+        "collection_incomplete_count": len(incomplete_ids),
+        "collection_incomplete_sample_set_sha256": incomplete_sample_set_sha256,
+        "collection_incomplete_partition_counts": collection_incomplete_partition_counts,
+        "modeling_candidate_policy": "COLLECTION_COMPLETE_ONLY",
+        "modeling_candidate_sample_count": len(complete_ids),
+        "modeling_candidate_sample_set_sha256": modeling_candidate_sample_set_sha256,
+        "modeling_candidate_partition_counts": modeling_candidate_partition_counts,
         "feature_dataset_sha256": dataset_sha,
         "feature_row_set_sha256": feature_rows_identity,
         "checkpoint_set_sha256": canonical_hash(checkpoint_file_hashes),
         "model_observable_fields": ["feature_vector"],
-        "metadata_only_fields": ["sample_id", "partition", "label"],
+        "metadata_only_fields": [
+            "sample_id", "partition", "label", "collection_incomplete",
+            "dropped_events", "delivery_errors", "history_truncated"
+        ],
         "raw_html_persisted": False,
         "raw_url_persisted": False,
         "audits": audits,
@@ -1138,8 +1267,15 @@ def _finalize(
         "feature_contract_sha256": EXPECTED_FEATURE_CONTRACT_SHA256,
         "authorized_sample_count": EXPECTED_TOTAL,
         "partition_counts": reproduced_counts,
+        "collection_incomplete_count": len(incomplete_ids),
+        "collection_incomplete_sample_set_sha256": incomplete_sample_set_sha256,
+        "collection_incomplete_partition_counts": collection_incomplete_partition_counts,
+        "modeling_candidate_policy": "COLLECTION_COMPLETE_ONLY",
+        "modeling_candidate_sample_count": len(complete_ids),
+        "modeling_candidate_sample_set_sha256": modeling_candidate_sample_set_sha256,
+        "modeling_candidate_partition_counts": modeling_candidate_partition_counts,
         "all_required_post_extraction_audits_passed": all(audits.values()),
-        "next_gate": "ISSUE_STAGE_C_MODEL_TRAINING_AUTHORIZATION",
+        "next_gate": "ISSUE_STAGE_C_MODEL_TRAINING_AUTHORIZATION_FOR_COMPLETE_COLLECTION_SUBSET",
     }
     readiness["readiness_sha256"] = canonical_hash(readiness)
     readiness_path = output_root / "development-feature-readiness.json"
@@ -1154,6 +1290,9 @@ def _finalize(
         "feature_readiness_sha256": readiness["readiness_sha256"],
         "rows": EXPECTED_TOTAL,
         "feature_count": 27,
+        "collection_incomplete_count": len(incomplete_ids),
+        "modeling_candidate_sample_count": len(complete_ids),
+        "modeling_candidate_sample_set_sha256": modeling_candidate_sample_set_sha256,
         "model_training_authorized": False,
         "model_scoring_authorized": False,
         "final_holdout_touched": False,

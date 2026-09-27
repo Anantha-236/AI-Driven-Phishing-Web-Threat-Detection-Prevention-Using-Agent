@@ -58,7 +58,14 @@ def test_batch_size_guard():
 
 
 def test_feature_row_is_closed_schema():
-    row = {"sample_id": "s", "partition": "train", "label": 0, "feature_vector": [0] * 27}
+    row = {
+        "sample_id": "s", "partition": "train", "label": 0,
+        "feature_vector": [0] * 27,
+        "collection_incomplete": False,
+        "dropped_events": 0,
+        "delivery_errors": 0,
+        "history_truncated": False,
+    }
     mod._validate_feature_row(row)
     bad = deepcopy(row)
     bad["raw_url"] = "https://example.invalid"
@@ -67,7 +74,14 @@ def test_feature_row_is_closed_schema():
 
 
 def test_feature_row_rejects_nonfinite():
-    row = {"sample_id": "s", "partition": "train", "label": 0, "feature_vector": [0] * 26 + [float("nan")]}
+    row = {
+        "sample_id": "s", "partition": "train", "label": 0,
+        "feature_vector": [0] * 26 + [float("nan")],
+        "collection_incomplete": False,
+        "dropped_events": 0,
+        "delivery_errors": 0,
+        "history_truncated": False,
+    }
     with pytest.raises(StageCFeatureExtractionError, match="NaN"):
         mod._validate_feature_row(row)
 
@@ -136,3 +150,28 @@ def test_memory_plan_never_persists_source_url_brand_or_disk_path():
     assert "brand_group" not in item
     assert "html_path" not in item
 
+
+
+def test_feature_row_accepts_explicit_collection_loss_metadata():
+    row = {
+        "sample_id": "s", "partition": "train", "label": 1,
+        "feature_vector": [0] * 27,
+        "collection_incomplete": True,
+        "dropped_events": 444,
+        "delivery_errors": 0,
+        "history_truncated": False,
+    }
+    mod._validate_feature_row(row)
+
+
+def test_feature_row_rejects_hidden_collection_loss():
+    row = {
+        "sample_id": "s", "partition": "train", "label": 1,
+        "feature_vector": [0] * 27,
+        "collection_incomplete": False,
+        "dropped_events": 1,
+        "delivery_errors": 0,
+        "history_truncated": False,
+    }
+    with pytest.raises(StageCFeatureExtractionError, match="collection-incomplete"):
+        mod._validate_feature_row(row)

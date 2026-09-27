@@ -19,7 +19,7 @@ def tiny_batch():
 
 
 def test_state_schema_bumped_for_memory_transport():
-    assert mod.STATE_SCHEMA == "stage-c-development-feature-extraction-state-5"
+    assert mod.STATE_SCHEMA == "stage-c-development-feature-extraction-state-6"
 
 
 def test_memory_plan_contains_no_disk_html_path():
@@ -47,7 +47,7 @@ def test_memory_collector_declares_closed_safety_policy():
     root = Path(mod.__file__).resolve().parents[2]
     path = root / "scripts" / "stage-c-collect-memory-replay.mjs"
     source = path.read_text(encoding="utf-8")
-    assert "stage-c-memory-replay-4" in source
+    assert "stage-c-memory-replay-5" in source
     assert "html_base64" in source
     assert "raw_html_materialized_to_disk: false" in source
     assert "raw_html_received_via_stdin_memory_stream: true" in source
@@ -119,7 +119,7 @@ def test_navigation_preservation_policy_is_frozen_into_state():
         '"FULFILL_204_AFTER_SINGLE_INITIAL_FULFILL"'
     ) in source
     assert '"repeated_controlled_url_reload_refulfilled": False' in source
-    assert "stage-c-memory-replay-4" in source
+    assert "stage-c-memory-replay-5" in source
 
 
 def test_initial_replay_document_is_fulfilled_exactly_once():
@@ -143,3 +143,38 @@ def test_repeated_same_url_navigation_falls_through_to_204_guard():
     secondary = source.index("if (isMainFrameNavigation && ['GET', 'HEAD'].includes(method))")
     assert initial < secondary
     assert "status: 204" in source[secondary:secondary + 600]
+
+
+def test_collection_loss_is_preserved_instead_of_treated_as_replay_failure():
+    root = Path(mod.__file__).resolve().parents[2]
+    source = (root / "scripts" / "stage-c-collect-memory-replay.mjs").read_text(
+        encoding="utf-8"
+    )
+    assert "PRESERVE_PRODUCTION_TRUNCATION_AND_FLAG" in source
+    assert "collection_incomplete: collectionIncomplete" in source
+    assert "history_truncated: historyTruncated" in source
+    assert "typed event queue dropped events:" not in source
+
+
+def test_incomplete_rows_are_excluded_from_modeling_candidates():
+    source = Path(mod.__file__).read_text(encoding="utf-8")
+    assert '"modeling_candidate_policy": "COLLECTION_COMPLETE_ONLY"' in source
+    assert '"modeling_candidate_sample_set_sha256"' in source
+    assert '"collection_incomplete_sample_set_sha256"' in source
+    assert '"incomplete_rows_modeling_candidate": False' in source
+
+
+def test_production_extractor_receives_collection_incomplete_signal():
+    source = Path(mod.__file__).read_text(encoding="utf-8")
+    assert "core.buildContextFeatures(row.events, incomplete)" in source
+    assert '"collection_incomplete": incomplete' in source
+
+
+def test_production_risk_fusion_fails_safe_on_incomplete_collection():
+    root = Path(mod.__file__).resolve().parents[2]
+    source = (
+        root / "browser-extension" / "src" / "core" / "agent" / "risk-fusion.ts"
+    ).read_text(encoding="utf-8")
+    assert "signals.collection.incomplete ||" in source
+    assert "state: 'UNCERTAIN'" in source
+    assert "automaticBlockAuthorized: false" in source

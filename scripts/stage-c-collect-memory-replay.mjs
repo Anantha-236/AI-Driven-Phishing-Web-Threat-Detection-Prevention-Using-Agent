@@ -9,7 +9,7 @@ import { createInterface } from 'node:readline';
 import { chromium } from '@playwright/test';
 
 const EPISODE_SCHEMA = 'stage-b-event-episodes-1';
-const COLLECTOR_VERSION = 'stage-c-memory-replay-4';
+const COLLECTOR_VERSION = 'stage-c-memory-replay-5';
 const PLAN_SCHEMA = 'stage-c-memory-replay-plan-1';
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 const ALLOWED_EVENT_FIELDS = new Set([
@@ -213,9 +213,9 @@ async function waitForQueueDrain(
     const now = Date.now();
     if (status && Number.isSafeInteger(status.queued_events) && status.queued_events >= 0) {
       lastStatus = status;
-      if (Number.isSafeInteger(status.dropped_events) && status.dropped_events > 0) {
-        throw new Error(`typed event queue dropped events: dropped_events=${status.dropped_events}`);
-      }
+      // Production queue overflow is a collection-quality signal, not a
+      // replay-infrastructure failure. Continue draining accepted events and
+      // preserve the exact production loss counters for Task-10 metadata.
       if (status.queued_events === 0) return status;
       if (lastQueued === null || status.queued_events < lastQueued) lastProgressAt = now;
       lastQueued = status.queued_events;
@@ -373,8 +373,9 @@ async function collectItem(context, worker, replay, item, html) {
       );
     }
 
+    let queueStatus;
     try {
-      await waitForQueueDrain(worker, first.tabId);
+      queueStatus = await waitForQueueDrain(worker, first.tabId);
     } catch (error) {
       const details = error instanceof Error ? error.message : String(error);
       throw new Error(
@@ -391,18 +392,33 @@ async function collectItem(context, worker, replay, item, html) {
       );
     }
     const state = snapshot.state;
-    const droppedEvents = Number(state.dropped || 0) + Number(state.content_dropped || 0);
+    const queueDroppedEvents = Number(queueStatus?.dropped_events || 0);
+    const recorderDroppedEvents = Number(state.dropped || 0);
+    const contentDroppedEvents = Number(state.content_dropped || 0);
+    const droppedEvents = recorderDroppedEvents + contentDroppedEvents;
     const deliveryErrors = Number(state.content_delivery_errors || 0);
-    if (droppedEvents !== 0) throw new Error('replay episode contains dropped events');
+    const eventHistoryLength = Array.isArray(state.events) ? state.events.length : 0;
+    const nextSeq = Number(state.next_seq || 1);
+    const historyTruncated = nextSeq > eventHistoryLength + 1;
 
+    if (contentDroppedEvents !== queueDroppedEvents) {
+      throw new Error(
+        `collection-loss accounting mismatch: queue_dropped=${queueDroppedEvents}, ` +
+        `recorded_content_dropped=${contentDroppedEvents}`,
+      );
+    }
+
+    const collectionIncomplete = droppedEvents > 0 || historyTruncated;
     const events = closedSanitizedEvents(state.events);
     return {
       sample_id: item.sample_id,
       events_sha256: sha256Text(canonicalJson(events)),
       collection_provenance: 'ARCHIVED_BROWSER_REPLAY',
       observation_horizon_ms: item.wait_ms,
+      collection_incomplete: collectionIncomplete,
       dropped_events: droppedEvents,
       delivery_errors: deliveryErrors,
+      history_truncated: historyTruncated,
       external_requests_blocked: externalRequestsBlocked,
       events,
     };
@@ -544,6 +560,8 @@ async function main() {
       secondary_main_frame_navigation_policy: 'FULFILL_204_AFTER_SINGLE_INITIAL_FULFILL',
       secondary_main_frame_navigation_external_network_allowed: false,
       repeated_controlled_url_reload_refulfilled: false,
+      collection_loss_policy: 'PRESERVE_PRODUCTION_TRUNCATION_AND_FLAG',
+      incomplete_rows_modeling_candidate: false,
       browser_response_cache_control_no_store: true,
     },
     episodes,
