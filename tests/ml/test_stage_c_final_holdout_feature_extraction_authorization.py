@@ -174,3 +174,13 @@ def test_frozen_write_is_immutable(tmp_path):
     assert mod.frozen_write_json(path, {"x": 1}) == "EXISTING_MATCH"
     with pytest.raises(StageCFinalHoldoutFeatureAuthorizationError):
         mod.frozen_write_json(path, {"x": 2})
+
+
+def test_task31_task24_schema_matches_task24_producer():
+    import ml.evaluation.stage_c_threshold_freeze as task24
+
+    assert task24.FREEZE_SCHEMA == "stage-c-threshold-freeze-1"
+
+    source = Path(mod.__file__).read_text(encoding="utf-8")
+    assert '"schema_version": "stage-c-threshold-freeze-1"' in source
+    assert '"schema_version": "stage-c-threshold-freeze-record-1"' not in source

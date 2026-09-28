@@ -383,7 +383,7 @@ def validate_task30_audit(audit: Mapping[str, Any]) -> None:
 
 def validate_threshold_freeze(record: Mapping[str, Any]) -> None:
     expected = {
-        "schema_version": "stage-c-threshold-freeze-record-1",
+        "schema_version": "stage-c-threshold-freeze-1",
         "status": "PASS",
         "stage": "C",
         "protocol_id": "low-fpr-generalization-v1",
