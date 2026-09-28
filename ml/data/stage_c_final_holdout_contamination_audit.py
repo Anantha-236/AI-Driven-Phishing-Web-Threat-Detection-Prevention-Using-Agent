@@ -5,16 +5,19 @@ This task audits the frozen CompPhish v3 final-holdout identity index against:
 2. the exact already-consumed Stage-B contextual-v2 final-test partition.
 
 It also prevents duplicate weighting inside the final holdout by grouping rows
-connected through exact HTML identity or normalized-URL identity and choosing a
-single deterministic representative from each same-label component.
+connected through exact HTML identity, or through normalized-URL identity only
+when the labels agree, and choosing a single deterministic representative from
+each clean same-label component.
 
 Hard quarantine conditions:
 - exact HTML overlap with Stage-C development
 - normalized URL overlap with Stage-C development
 - exact HTML overlap with the consumed Stage-B final test
+- identical HTML carrying conflicting labels inside the final holdout
 
-Hard failure:
-- a final-holdout identity component contains conflicting labels
+Same normalized URL with different HTML and different labels is not collapsed
+into one identity component. This preserves possible temporal/state changes at
+the same URL while still preventing duplicate weighting within each label.
 
 Audit-only signals:
 - hostname overlap with Stage-C development
@@ -377,18 +380,26 @@ def build_identity_components(
 ) -> list[list[dict[str, Any]]]:
     uf = _UF(len(rows))
     seen_html: dict[str, int] = {}
-    seen_url: dict[str, int] = {}
+    seen_url_label: dict[tuple[str, int], int] = {}
     for i, row in enumerate(rows):
         html = row["html_sha256"]
         url = row["normalized_url_sha256"]
+        label = row["label"]
+
+        # Exact HTML is the strongest content identity and is joined regardless
+        # of label so contradictory labels can be detected and quarantined.
         if html in seen_html:
             uf.union(i, seen_html[html])
         else:
             seen_html[html] = i
-        if url in seen_url:
-            uf.union(i, seen_url[url])
+
+        # A URL can legitimately change state/content over time. Only collapse
+        # same-URL rows when their labels already agree.
+        url_label_key = (url, label)
+        if url_label_key in seen_url_label:
+            uf.union(i, seen_url_label[url_label_key])
         else:
-            seen_url[url] = i
+            seen_url_label[url_label_key] = i
 
     buckets: dict[int, list[dict[str, Any]]] = defaultdict(list)
     for i, row in enumerate(rows):
@@ -500,21 +511,12 @@ def audit_final_holdout_contamination(
         for component in components
         if len({row["label"] for row in component}) > 1
     ]
-    if cross_label_components:
-        evidence = [
-            {
-                "component_sha256": canonical_hash(
-                    sorted(row["sample_id"] for row in component)
-                ),
-                "sample_count": len(component),
-                "labels": sorted({row["label"] for row in component}),
-            }
-            for component in cross_label_components
-        ]
-        raise StageCFinalHoldoutContaminationError(
-            "final-holdout identity components contain conflicting labels; "
-            f"groups={len(evidence)}, evidence_sha256={canonical_hash(evidence)}"
-        )
+
+    # These components are not relabeled and are not allowed into final
+    # evaluation. Identical model input cannot have two ground truths.
+    cross_label_conflict_sample_count = sum(
+        len(component) for component in cross_label_components
+    )
 
     quarantined: list[dict[str, Any]] = []
     eligible: list[dict[str, Any]] = []
@@ -524,6 +526,10 @@ def audit_final_holdout_contamination(
 
     for component in components:
         reasons: set[str] = set()
+        component_labels = sorted({row["label"] for row in component})
+        if len(component_labels) > 1:
+            reasons.add("EXACT_HTML_CROSS_LABEL_CONFLICT_WITHIN_HOLDOUT")
+
         for row in component:
             if row["html_sha256"] in dev_html:
                 reasons.add("EXACT_HTML_OVERLAP_STAGE_C_DEVELOPMENT")
@@ -544,7 +550,12 @@ def audit_final_holdout_contamination(
                 ),
                 "representative_sample_id": representative["sample_id"],
                 "sample_count": len(component),
-                "label": representative["label"],
+                "label": (
+                    component_labels[0]
+                    if len(component_labels) == 1
+                    else None
+                ),
+                "labels": component_labels,
                 "reasons": sorted(reasons),
             })
             continue
@@ -590,7 +601,8 @@ def audit_final_holdout_contamination(
     duplicate_rows_removed = sum(
         max(0, len(component) - 1)
         for component in components
-        if not any(
+        if len({row["label"] for row in component}) == 1
+        and not any(
             row["html_sha256"] in dev_html
             or row["normalized_url_sha256"] in dev_url_hashes
             or row["html_sha256"] in stage_b_artifacts
@@ -624,7 +636,10 @@ def audit_final_holdout_contamination(
         ),
         "deduplication_rule": (
             "ONE_LEXICOGRAPHICALLY_SMALLEST_SAMPLE_ID_PER_CONNECTED_COMPONENT_"
-            "OF_EXACT_HTML_OR_NORMALIZED_URL"
+            "OF_EXACT_HTML_OR_SAME_LABEL_NORMALIZED_URL"
+        ),
+        "cross_label_exact_html_policy": (
+            "QUARANTINE_ENTIRE_CONFLICTING_EXACT_HTML_COMPONENT_NO_RELABELING"
         ),
         "contamination_quarantine_applied": True,
         "model_scoring_performed": False,
@@ -681,7 +696,15 @@ def audit_final_holdout_contamination(
         "stage_b_consumed_test_unique_domain_groups_audit_only": len(
             stage_b_domains
         ),
-        "cross_label_identity_conflict_components": 0,
+        "cross_label_identity_conflict_components": len(
+            cross_label_components
+        ),
+        "cross_label_identity_conflict_samples": (
+            cross_label_conflict_sample_count
+        ),
+        "cross_label_identity_conflict_policy": (
+            "QUARANTINE_ENTIRE_CONFLICTING_EXACT_HTML_COMPONENT_NO_RELABELING"
+        ),
         "wilson_resolution_minimum_legitimate_satisfied": (
             labels[0] >= MIN_LEGITIMATE_FOR_WILSON
         ),
