@@ -32,8 +32,14 @@ def _evidence(recalls, feasible=None):
 def test_schema_and_task17_hash_are_frozen():
     assert mod.SELECTION_SCHEMA == "stage-c-candidate-selection-1"
     assert mod.EXPECTED_TASK17_AUTHORIZATION_SHA256 == (
-        "416c29e333325b0f201eecde801fdc1ee05b966a8d84c78bd24a07a626ea34"
+        "416c29e333325b0f0f201eecde801fdc1ee05b966a8d84c78bd24a07a626ea34"
     )
+
+
+def test_task17_authorization_hash_is_full_sha256():
+    value = mod.EXPECTED_TASK17_AUTHORIZATION_SHA256
+    assert len(value) == 64
+    assert set(value) <= set("0123456789abcdef")
 
 
 def test_selection_evidence_hash_is_frozen():
