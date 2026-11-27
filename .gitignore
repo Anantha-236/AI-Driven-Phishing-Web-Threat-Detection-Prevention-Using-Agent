@@ -73,3 +73,8 @@ Upgrades/**/backups/
 
 # Local Stage B browser candidate installed only after parity verification
 browser-extension/assets/stage-b-candidate/
+
+# Large/unwanted files
+Upgrades/*.bin
+*.zip
+--basetemp
