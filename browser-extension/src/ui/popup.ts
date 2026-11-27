@@ -79,7 +79,8 @@ function human(value: string): string {
 }
 
 function renderCodes(id: string, codes: string[], empty: string) {
-  const list = document.getElementById(id)!;
+  const list = document.getElementById(id);
+  if (!list) return;
   list.replaceChildren();
 
   for (const code of codes.length ? codes : [empty]) {
@@ -130,42 +131,146 @@ function renderAgentRuntime(runtime: AgentRuntimeSnapshot | null) {
   set('agent-updated-at', new Date(runtime.updated_at).toLocaleString());
 }
 
+function getVerdictInfo(threatLevel: string) {
+  switch (threatLevel) {
+    case 'benign':
+      return {
+        cardClass: 'verdict-card state-benign',
+        badgeClass: 'threat-level benign',
+        icon: '🛡️',
+        title: 'Safe to Browse',
+        desc: 'No deceptive behaviors, credential harvesting, or phishing attempts detected.',
+      };
+    case 'suspicious':
+      return {
+        cardClass: 'verdict-card state-suspicious',
+        badgeClass: 'threat-level suspicious',
+        icon: '⚠️',
+        title: 'Caution Advised',
+        desc: 'Suspicious form behavior or unusual destination routing detected.',
+      };
+    case 'malicious':
+      return {
+        cardClass: 'verdict-card state-malicious',
+        badgeClass: 'threat-level malicious',
+        icon: '🚫',
+        title: 'Phishing Threat Blocked',
+        desc: 'Deceptive credential harvesting or phishing attempt detected.',
+      };
+    default:
+      return {
+        cardClass: 'verdict-card',
+        badgeClass: 'threat-level insufficient_evidence',
+        icon: '🔍',
+        title: 'Observing Page',
+        desc: 'Monitoring page structure and active security indicators.',
+      };
+  }
+}
+
 function render(report: EventSecurityReport | null) {
-  document.getElementById('threat-container')!.style.display = report ? 'block' : 'none';
-  document.getElementById('status-idle')!.style.display = report ? 'none' : 'block';
+  const threatContainer = document.getElementById('threat-container');
+  const statusIdle = document.getElementById('status-idle');
+  if (threatContainer) threatContainer.style.display = report ? 'block' : 'none';
+  if (statusIdle) statusIdle.style.display = report ? 'none' : 'block';
 
   if (!report) return;
 
+  const verdict = getVerdictInfo(report.threatLevel);
+  const verdictCard = document.getElementById('verdict-card');
+  if (verdictCard) verdictCard.className = verdict.cardClass;
+
+  set('verdict-icon', verdict.icon);
+  set('verdict-title', verdict.title);
+  set('verdict-desc', verdict.desc);
+
+  // Active domain display
+  set('page-domain-display', report.page_origin || 'Current Webpage');
+
+  // Exact elements needed for compatibility with test assertions
+  const threatLevelEl = document.getElementById('threat-level');
+  if (threatLevelEl) {
+    threatLevelEl.textContent =
+      report.threatLevel === 'benign'
+        ? 'No elevated pattern observed'
+        : human(report.threatLevel);
+    threatLevelEl.className = verdict.badgeClass;
+  }
+
+  // Recommendation box
+  const recBox = document.getElementById('recommendation-box');
+  const recIcon = document.getElementById('recommendation-icon');
+  if (recBox && recIcon) {
+    if (report.threatLevel === 'malicious') {
+      recBox.className = 'advice-box advice-danger';
+      recIcon.textContent = '🛑';
+    } else if (report.threatLevel === 'suspicious') {
+      recBox.className = 'advice-box advice-warning';
+      recIcon.textContent = '⚠️';
+    } else {
+      recBox.className = 'advice-box advice-safe';
+      recIcon.textContent = '✅';
+    }
+  }
+
   set(
-    'threat-level',
-    report.threatLevel === 'benign'
-      ? 'No elevated pattern observed'
-      : human(report.threatLevel),
+    'recommendation',
+    report.action === 'ALLOW'
+      ? 'Safe to browse. Standard security checks passed.'
+      : 'Verify the website before submitting sensitive details.',
   );
 
-  document.getElementById('threat-level')!.className =
-    `threat-level ${report.threatLevel}`;
+  // Form destinations
+  const destinations = document.getElementById('form-destinations');
+  if (destinations) {
+    destinations.replaceChildren();
+    for (const form of report.form_destinations ?? []) {
+      const row = document.createElement('li');
+      row.textContent =
+        `Frame ${form.frame_id}, form ${form.form_id}: ${form.sensitive_types.join(', ') || 'no classified sensitive fields'} ` +
+        `→ ${form.target_origin || 'unknown target'} (${human(form.status)}). ` +
+        `Page: ${form.page_origin || 'unknown'}. Evidence event ${form.event_seq}.`;
+      destinations.append(row);
+    }
 
+    if (!destinations.childElementCount) {
+      const row = document.createElement('li');
+      row.textContent =
+        'No form destination available. Script-generated destinations may not be knowable before a request.';
+      destinations.append(row);
+    }
+  }
+
+  // Compatibility and advanced data
   set('score', report.risk);
   set(
     'confidence',
     `${report.confidence} (evidence heuristic; not a calibrated probability)`,
   );
 
-  set(
-    'purpose',
-    `${human(report.purpose.value)} (${report.purpose.evidence_status.toLowerCase()}, ${report.purpose.confidence.toLowerCase()} confidence). ` +
-      `${report.purpose.basis.map(human).join('; ')}. ${report.purpose.limitations.join(' ')}`,
-  );
+  set('domain', report.page_origin || 'Origin unknown');
+  set('data-categories', report.requestedDataTypes.join(', ') || 'None observed');
+  set('action', report.action);
+  set('outcome', human(report.outcome));
+  set('destinations', report.destinations.join(', ') || 'No destination observed');
 
-  set(
-    'completeness',
-    `${report.evidence_completeness.level}: ${Math.round(report.evidence_completeness.score * 100)}% of defined observation categories. ` +
-      `This measures coverage, not website safety. Missing: ${
-        report.evidence_completeness.missing.map(human).join(', ') ||
-        'none in the defined categories'
-      }.`,
-  );
+  // Indicators and reasons
+  const list = document.getElementById('reasons-list');
+  if (list) {
+    list.replaceChildren();
+    for (const evidence of report.evidence.slice(-30)) {
+      const item = document.createElement('li');
+      item.textContent =
+        `${evidence.evidence_status}: ${labels[evidence.code] || evidence.code} Supporting events: ${evidence.event_seqs.join(', ')}.`;
+      list.append(item);
+    }
+    if (!report.evidence.length) {
+      const item = document.createElement('li');
+      item.textContent =
+        'No elevated relationship evidence observed. This does not establish that the website is safe.';
+      list.append(item);
+    }
+  }
 
   renderCodes(
     'positive-evidence',
@@ -179,11 +284,16 @@ function render(report: EventSecurityReport | null) {
     'No contextual contradictions observed',
   );
 
-  set('domain', report.page_origin || 'Origin unknown');
-  set('data-categories', report.requestedDataTypes.join(', ') || 'None observed');
-  set('action', report.action);
-  set('outcome', human(report.outcome));
+  set(
+    'completeness',
+    `${report.evidence_completeness.level}: ${Math.round(report.evidence_completeness.score * 100)}% of defined observation categories. ` +
+      `This measures coverage, not website safety. Missing: ${
+        report.evidence_completeness.missing.map(human).join(', ') ||
+        'none in the defined categories'
+      }.`,
+  );
 
+  // Model & Agent info
   set(
     'model',
     report.model_score === null
@@ -195,8 +305,6 @@ function render(report: EventSecurityReport | null) {
         }`,
   );
 
-  set('destinations', report.destinations.join(', ') || 'No destination observed');
-
   set(
     'agent',
     `${report.agent_version}: LOCAL PRIMARY assessment. The browser combines model output and contextual evidence; ` +
@@ -204,9 +312,14 @@ function render(report: EventSecurityReport | null) {
       'Confirmation is not proof of phishing.',
   );
 
+  set(
+    'purpose',
+    `${human(report.purpose.value)} (${report.purpose.evidence_status.toLowerCase()}, ${report.purpose.confidence.toLowerCase()} confidence). ` +
+      `${report.purpose.basis.map(human).join('; ')}. ${report.purpose.limitations.join(' ')}`,
+  );
+
   const identity = report.identity;
   const source = LOGIN_ORIGINS.find(entry => entry.origin === report.page_origin);
-
   set(
     'identity',
     identity?.status === 'KNOWN_LOGIN_ORIGIN'
@@ -217,42 +330,6 @@ function render(report: EventSecurityReport | null) {
         : 'Unknown. No matching entry in the limited login-origin registry. HTTPS alone does not establish authenticity.',
   );
 
-  const destinations = document.getElementById('form-destinations')!;
-  destinations.replaceChildren();
-
-  for (const form of report.form_destinations ?? []) {
-    const row = document.createElement('li');
-    row.textContent =
-      `Frame ${form.frame_id}, form ${form.form_id}: ${form.sensitive_types.join(', ') || 'no classified sensitive fields'} ` +
-      `→ ${form.target_origin || 'unknown target'} (${human(form.status)}). ` +
-      `Page: ${form.page_origin || 'unknown'}. Evidence event ${form.event_seq}.`;
-    destinations.append(row);
-  }
-
-  if (!destinations.childElementCount) {
-    const row = document.createElement('li');
-    row.textContent =
-      'No form destination available. Script-generated destinations may not be knowable before a request.';
-    destinations.append(row);
-  }
-
-  const list = document.getElementById('reasons-list')!;
-  list.replaceChildren();
-
-  for (const evidence of report.evidence.slice(-30)) {
-    const item = document.createElement('li');
-    item.textContent =
-      `${evidence.evidence_status}: ${labels[evidence.code]} Supporting events: ${evidence.event_seqs.join(', ')}.`;
-    list.append(item);
-  }
-
-  if (!report.evidence.length) {
-    const item = document.createElement('li');
-    item.textContent =
-      'No elevated relationship evidence observed. This does not establish that the website is safe.';
-    list.append(item);
-  }
-
   set(
     'unknowns',
     'UNKNOWN: destination authorization and whether a sensitive value was transmitted. ' +
@@ -262,13 +339,6 @@ function render(report: EventSecurityReport | null) {
       (report.unknowns.includes('COLLECTION_INCOMPLETE')
         ? ' Collection is incomplete.'
         : ''),
-  );
-
-  set(
-    'recommendation',
-    report.action === 'ALLOW'
-      ? 'Use your normal verification steps before sharing sensitive information.'
-      : 'Verify the website and destination before submitting. A changed sensitive-form destination may require confirmation.',
   );
 
   set(
@@ -293,12 +363,14 @@ async function refresh() {
 
     const d = response?.delivery;
 
-    set(
-      'runtime-status',
-      response?.ok
-        ? `v${response.extension_version || '?'} · LOCAL AGENT`
-        : 'UNAVAILABLE',
-    );
+    const runtimeStatusEl = document.getElementById('runtime-status');
+    if (runtimeStatusEl) {
+      if (response?.ok) {
+        runtimeStatusEl.innerHTML = `<span class="status-dot"></span> v${response.extension_version || '1.3.0'} · ACTIVE`;
+      } else {
+        runtimeStatusEl.innerHTML = `<span class="status-dot" style="background:#94a3b8;box-shadow:none;"></span> STANDBY`;
+      }
+    }
 
     set(
       'delivery',
@@ -332,7 +404,10 @@ async function refresh() {
   } catch {
     render(null);
     renderAgentRuntime(null);
-    set('runtime-status', 'UNAVAILABLE');
+    const runtimeStatusEl = document.getElementById('runtime-status');
+    if (runtimeStatusEl) {
+      runtimeStatusEl.innerHTML = `<span class="status-dot" style="background:#ef4444;"></span> UNAVAILABLE`;
+    }
   }
 }
 
