@@ -14,8 +14,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
-from database import db_instance
-from models import ObservationRequest, ServiceProfileResponse
+from backend.database import db_instance
+from backend.models import ObservationRequest, ServiceProfileResponse
 
 
 def validate_privacy_safety(payload: Dict[str, Any]) -> Dict[str, Any]:

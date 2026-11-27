@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Literal
 from urllib.parse import urlsplit
 from pydantic import BaseModel as PydanticBaseModel, ConfigDict, Field, field_validator, model_validator
-from events import SensitiveType, origin_only
+from backend.events import SensitiveType, origin_only
 
 
 class BaseModel(PydanticBaseModel):
