@@ -15,10 +15,10 @@ from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from backend.events import EventBatch, SecurityReport, AgentRequest, run_ml_agent
+from events import EventBatch, SecurityReport, AgentRequest, run_ml_agent
 
-from backend.database import db_instance
-from backend.models import (
+from database import db_instance
+from models import (
     ModelInfoResponse,
     ObservationRequest,
     ObservationResponse,
